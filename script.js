@@ -191,11 +191,20 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleTransactionInput(row) {
     const dateInput = row.querySelector("td:nth-child(1) input");
     const descriptionInput = row.querySelector("td:nth-child(2) input");
+    const creditInput = row.querySelector("td:nth-child(3) input");
+    const debitInput = row.querySelector("td:nth-child(4) input");
 
-    if (dateInput.value && descriptionInput.value) {
+    // Set today's date if it's empty
+    if (!dateInput.value) {
+      dateInput.value = new Date().toISOString().split("T")[0];
+      console.log("Set date to today:", dateInput.value);
+    }
+
+    // Check if this is a filled transaction (description and either credit or debit)
+    if (descriptionInput.value && (creditInput.value || debitInput.value)) {
       // This is no longer a "new" row, remove the ID
       row.removeAttribute("id");
-      console.log("Removed add-transaction-row ID from filled row");
+      console.log("Converted to regular transaction row");
 
       // Make sure we have a new empty row
       ensureNewTransactionRow();

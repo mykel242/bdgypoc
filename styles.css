@@ -24,3 +24,40 @@ input {
     width: 100%;
     box-sizing: border-box;
 }
+
+/* Style for number inputs */
+input[type="number"] {
+    font-family: "Courier New", monospace;
+    text-align: right;
+    background-color: transparent;
+    border: none;
+    outline: none;
+}
+
+/* Style for credit/debit/balance cells */
+td:nth-child(3),
+td:nth-child(4),
+td:nth-child(5) {
+    text-align: right;
+    font-family: "Courier New", monospace;
+    padding-right: 10px;
+}
+
+/* Style for column headers */
+th:nth-child(3),
+th:nth-child(4),
+th:nth-child(5) {
+    text-align: right;
+}
+
+/* Hide number input spinners in Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Hide number input spinners in Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
