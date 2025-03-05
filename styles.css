@@ -41,6 +41,8 @@ td:nth-child(5) {
     text-align: right;
     font-family: "Courier New", monospace;
     padding-right: 10px;
+    font-size: 14px; /* Consistent font size */
+    vertical-align: baseline; /* Align text baseline */
 }
 
 /* Style for column headers */
