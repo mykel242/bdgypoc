@@ -136,8 +136,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       overlay.textContent = displayValue;
 
-      // Hide input value visually but keep it for calculations
-      input.style.color = "transparent";
+      // Hide input value visually when not focused
+      if (document.activeElement !== input) {
+        input.style.color = "transparent";
+        overlay.style.visibility = "visible";
+      } else {
+        input.style.color = "";
+        overlay.style.visibility = "hidden";
+      }
     } else {
       // Remove overlay if exists and value is 0
       const overlay = input.parentNode.querySelector(".debit-overlay");
@@ -266,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Listen for debit input
+    // Listen for debit input and focus events
     debitInput.addEventListener("input", () => {
       // If debit has value, clear credit
       if (debitInput.value) {
@@ -275,9 +281,26 @@ document.addEventListener("DOMContentLoaded", () => {
       formatDebitDisplay(debitInput);
     });
 
+    debitInput.addEventListener("focus", () => {
+      // Show actual input text when focused
+      debitInput.style.color = "";
+      const overlay = debitInput.parentNode.querySelector(".debit-overlay");
+      if (overlay) {
+        overlay.style.visibility = "hidden";
+      }
+    });
+
     // Format debit display on blur
     debitInput.addEventListener("blur", () => {
       console.log("Debit input blur event");
+      // Hide input text and show formatted overlay
+      if (parseFloat(debitInput.value || 0) > 0) {
+        debitInput.style.color = "transparent";
+        const overlay = debitInput.parentNode.querySelector(".debit-overlay");
+        if (overlay) {
+          overlay.style.visibility = "visible";
+        }
+      }
       formatDebitDisplay(debitInput);
       handleTransactionInput(row);
       updateTotals();
