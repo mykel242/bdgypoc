@@ -226,6 +226,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const paidCheckbox = row.querySelector("td:nth-child(6) input");
     const clearedCheckbox = row.querySelector("td:nth-child(7) input");
 
+    // Add date change event listener
+    dateInput.addEventListener("change", () => {
+      console.log("Date changed to:", dateInput.value);
+      handleTransactionInput(row);
+    });
+
     // Listen for credit input
     creditInput.addEventListener("input", () => {
       // If credit has value, clear debit
