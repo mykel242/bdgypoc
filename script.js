@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.updateTotals = updateTotals;
 
   // Load or initialize starting balance
+  // Updated initializeStartingBalance function
   function initializeStartingBalance() {
     const startingBalanceRow = document.querySelector(
       'tr[data-row-type="starting-balance"]',
@@ -17,10 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const startingBalanceCell =
       startingBalanceRow.querySelector("td:nth-child(5)");
 
-    // Set today's date if not set
-    if (!startingDateInput.value) {
-      startingDateInput.value = new Date().toISOString().split("T")[0];
-    }
+    // Load saved date if available
+    const savedDate = TransactionManager.getStartingBalanceDate();
+    startingDateInput.value = savedDate;
+
+    // Add event listener to save date changes
+    startingDateInput.addEventListener("change", () => {
+      TransactionManager.saveStartingBalanceDate(startingDateInput.value);
+    });
 
     // Make balance editable
     startingBalanceCell.setAttribute("contenteditable", "true");

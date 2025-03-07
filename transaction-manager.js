@@ -31,6 +31,15 @@ const TransactionManager = {
     localStorage.setItem("startingBalance", balance.toFixed(2));
   },
 
+  getStartingBalanceDate() {
+    const stored = localStorage.getItem("startingBalanceDate");
+    return stored || new Date().toISOString().split("T")[0];
+  },
+
+  saveStartingBalanceDate(date) {
+    localStorage.setItem("startingBalanceDate", date);
+  },
+
   // Create a new transaction object
   createTransaction(data = {}) {
     const transactions = this.getTransactions();
@@ -148,22 +157,24 @@ const TransactionManager = {
     return testData;
   },
 
-  // Clear all transaction data
   clearAllData() {
     localStorage.removeItem(this.STORAGE_KEY);
     localStorage.removeItem("startingBalance");
+    localStorage.removeItem("startingBalanceDate");
     return true;
   },
 
-  // Export for use in other files
   exports: function () {
     return {
+      // Existing exports...
       STORAGE_KEY: this.STORAGE_KEY,
       generateUUID: this.generateUUID,
       getTransactions: this.getTransactions.bind(this),
       saveTransactions: this.saveTransactions.bind(this),
       getStartingBalance: this.getStartingBalance.bind(this),
       saveStartingBalance: this.saveStartingBalance.bind(this),
+      getStartingBalanceDate: this.getStartingBalanceDate.bind(this),
+      saveStartingBalanceDate: this.saveStartingBalanceDate.bind(this),
       createTransaction: this.createTransaction.bind(this),
       addTransaction: this.addTransaction.bind(this),
       updateTransaction: this.updateTransaction.bind(this),
