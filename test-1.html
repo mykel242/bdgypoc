@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Transaction Manager Test</title>
+        <link rel="stylesheet" href="styles.css" />
+        <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
+    </head>
+    <body>
+        <h1>Expense Tracker Test</h1>
+        <div class="control-panel">
+            <button id="add-test-data">Add Test Data</button>
+            <button id="clear-data">Clear Data</button>
+        </div>
+
+        <h2>Transaction Data</h2>
+        <div id="output"></div>
+
+        <h2>Ledger View</h2>
+        <table id="ledger">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Credit (+)</th>
+                    <th>Debit (-)</th>
+                    <th>Balance</th>
+                    <th>Paid</th>
+                    <th>Cleared</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr data-row-type="starting-balance">
+                    <td><input type="date" /></td>
+                    <td>Starting Balance</td>
+                    <td></td>
+                    <td></td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr data-row-type="totals">
+                    <td><strong>Totals</strong></td>
+                    <td></td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <script src="transaction-manager.js"></script>
+        <script src="ledger-renderer.js"></script>
+        <script src="script2.js"></script>
+        <script>
+            document
+                .getElementById("add-test-data")
+                .addEventListener("click", () => {
+                    const data = TransactionManager.addTestData();
+                    displayData(data);
+                    // Refresh the ledger display after adding test data
+                    LedgerRenderer.renderLedger(
+                        document.querySelector("#ledger tbody"),
+                    );
+                    // Update balance calculations
+                    if (window.updateTotals) {
+                        window.updateTotals();
+                    }
+                });
+
+            document
+                .getElementById("clear-data")
+                .addEventListener("click", () => {
+                    TransactionManager.clearAllData();
+                    document.getElementById("output").innerHTML =
+                        "Data cleared";
+                    // Refresh the ledger display after clearing data
+                    LedgerRenderer.renderLedger(
+                        document.querySelector("#ledger tbody"),
+                    );
+                    // Update balance calculations
+                    if (window.updateTotals) {
+                        window.updateTotals();
+                    }
+                });
+
+            function displayData(data) {
+                const output = document.getElementById("output");
+                output.innerHTML =
+                    "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+            }
+
+            // Show existing data on load
+            displayData(TransactionManager.getTransactions());
+        </script>
+    </body>
+</html>
