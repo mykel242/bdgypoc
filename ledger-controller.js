@@ -252,6 +252,10 @@ const LedgerController = {
     const paidCheckbox = row.querySelector("td:nth-child(6) input");
     const clearedCheckbox = row.querySelector("td:nth-child(7) input");
 
+    // Set min attribute to 0 for credit and debit inputs to disallow negative numbers
+    creditInput.min = "0";
+    debitInput.min = "0";
+
     // Add date change event listener
     dateInput.addEventListener("change", () => {
       console.log("Date changed to:", dateInput.value);
@@ -260,6 +264,11 @@ const LedgerController = {
 
     // Listen for credit input
     creditInput.addEventListener("input", () => {
+      // Ensure value is not negative
+      if (parseFloat(creditInput.value) < 0) {
+        creditInput.value = ""; // Clear negative values
+      }
+
       // If credit has value, clear debit
       if (creditInput.value) {
         debitInput.value = "";
@@ -268,6 +277,11 @@ const LedgerController = {
 
     // Listen for debit input and focus events
     debitInput.addEventListener("input", () => {
+      // Ensure value is not negative
+      if (parseFloat(debitInput.value) < 0) {
+        debitInput.value = ""; // Clear negative values
+      }
+
       // If debit has value, clear credit
       if (debitInput.value) {
         creditInput.value = "";
@@ -287,6 +301,12 @@ const LedgerController = {
     // Format debit display on blur
     debitInput.addEventListener("blur", () => {
       console.log("Debit input blur event");
+
+      // Ensure no negative values on blur
+      if (parseFloat(debitInput.value) < 0) {
+        debitInput.value = "";
+      }
+
       // Hide input text and show formatted overlay
       if (parseFloat(debitInput.value || 0) > 0) {
         debitInput.style.color = "transparent";
@@ -303,6 +323,12 @@ const LedgerController = {
     // Update on blur for other inputs
     creditInput.addEventListener("blur", () => {
       console.log("Credit input blur event");
+
+      // Ensure no negative values on blur
+      if (parseFloat(creditInput.value) < 0) {
+        creditInput.value = "";
+      }
+
       this.handleTransactionInput(row);
       this.updateTotals();
     });
@@ -333,9 +359,6 @@ const LedgerController = {
 
     // Format any existing debit value
     this.formatDebitDisplay(debitInput);
-
-    // Note: Row selection is handled by LedgerSelection module's global click handler
-    // No need for additional row click handlers here
   },
 
   // Updated formatDebitDisplay method in ledger-controller.js

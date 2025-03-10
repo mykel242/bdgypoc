@@ -265,3 +265,48 @@ input:focus {
     outline: none;
     box-shadow: 0 0 0 1px rgba(74, 144, 226, 0.3);
 }
+
+/* Styling for number input validation */
+input[type="number"]:invalid {
+    background-color: #fff8f8;
+    border-bottom: 1px solid #e74c3c;
+}
+
+/* Add a simple tooltip to explain why an input is invalid */
+input[type="number"]:invalid::after {
+    content: "Only positive numbers allowed";
+    position: absolute;
+    top: -30px;
+    left: 0;
+    background: #e74c3c;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+input[type="number"]:invalid:focus::after {
+    opacity: 1;
+}
+
+/* Small indicator icon for invalid inputs */
+.input-container {
+    position: relative;
+}
+
+input[type="number"]:invalid + .validation-icon {
+    display: block;
+}
+
+.validation-icon {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #e74c3c;
+    font-size: 12px;
+    display: none;
+}

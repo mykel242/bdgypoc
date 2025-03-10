@@ -32,14 +32,12 @@ const LedgerRenderer = {
     rows.forEach((row) => row.remove());
   },
 
-  // Update to createTransactionRow method in ledger-renderer.js
   createTransactionRow(transaction) {
     const row = document.createElement("tr");
     row.dataset.transactionId = transaction.id;
     row.dataset.sequence = transaction.sequence;
 
     // Add a class to newly created transactions for animation
-    // We'll identify newly created transactions by checking if they were created in the last 5 seconds
     const fiveSecondsAgo = new Date(new Date().getTime() - 5000).toISOString();
     if (transaction.createdAt && transaction.createdAt > fiveSecondsAgo) {
       row.classList.add("new-transaction");
@@ -71,6 +69,7 @@ const LedgerRenderer = {
     const creditInput = document.createElement("input");
     creditInput.type = "number";
     creditInput.step = "0.01";
+    creditInput.min = "0"; // Set minimum value to 0 to disallow negative numbers
     creditInput.value = transaction.credit > 0 ? transaction.credit : "";
     creditCell.appendChild(creditInput);
     row.appendChild(creditCell);
@@ -80,6 +79,7 @@ const LedgerRenderer = {
     const debitInput = document.createElement("input");
     debitInput.type = "number";
     debitInput.step = "0.01";
+    debitInput.min = "0"; // Set minimum value to 0 to disallow negative numbers
     debitInput.value = transaction.debit > 0 ? transaction.debit : "";
     debitCell.appendChild(debitInput);
     row.appendChild(debitCell);
@@ -143,6 +143,7 @@ const LedgerRenderer = {
       const creditInput = document.createElement("input");
       creditInput.type = "number";
       creditInput.step = "0.01";
+      creditInput.min = "0"; // Set minimum value to 0
       creditCell.appendChild(creditInput);
       newRow.appendChild(creditCell);
 
@@ -151,6 +152,7 @@ const LedgerRenderer = {
       const debitInput = document.createElement("input");
       debitInput.type = "number";
       debitInput.step = "0.01";
+      debitInput.min = "0"; // Set minimum value to 0
       debitCell.appendChild(debitInput);
       newRow.appendChild(debitCell);
 
