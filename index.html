@@ -1,53 +1,53 @@
 <!doctype html>
 <html>
     <head>
-        <title>Monthly Expenses Tracker</title>
+        <title>Transaction Manager Test</title>
         <link rel="stylesheet" href="styles.css" />
         <link rel="stylesheet" href="enhanced-styles.css" />
+        <link rel="stylesheet" href="ledger-management-styles.css" />
         <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
     </head>
     <body>
-        <h1>Monthly Expenses Tracker</h1>
-        <div id="ledger-container">
-            <table id="ledger">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Credit (+)</th>
-                        <th>Debit (-)</th>
-                        <th>Balance</th>
-                        <th>Paid</th>
-                        <th>Cleared</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr data-row-type="starting-balance">
-                        <td><input type="date" /></td>
-                        <td>Starting Balance</td>
-                        <td></td>
-                        <td></td>
-                        <td>0.00</td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                    <tr data-row-type="totals">
-                        <td><strong>Totals</strong></td>
-                        <td></td>
-                        <td>0.00</td>
-                        <td>0.00</td>
-                        <td>0.00</td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <h1>Expense Tracker Test</h1>
+        <table id="ledger">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Credit (+)</th>
+                    <th>Debit (-)</th>
+                    <th>Balance</th>
+                    <th>Paid</th>
+                    <th>Cleared</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr data-row-type="starting-balance">
+                    <td><input type="date" /></td>
+                    <td>Starting Balance</td>
+                    <td></td>
+                    <td></td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr data-row-type="totals">
+                    <td><strong>Totals</strong></td>
+                    <td></td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
 
         <script src="transaction-manager.js"></script>
         <script src="ledger-renderer.js"></script>
         <script src="ledger-controller.js"></script>
         <script src="ledger-selection.js"></script>
+        <script src="ledger-management.js"></script>
         <script src="script.js"></script>
     </body>
 </html>

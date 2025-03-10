@@ -1,4 +1,4 @@
-// ledger-controller.js
+// ledger-controller.js with multiple ledger support
 const LedgerController = {
   init() {
     console.log("Initializing LedgerController");
@@ -25,6 +25,18 @@ const LedgerController = {
       startingBalanceRow.querySelector('input[type="date"]');
     const startingBalanceCell =
       startingBalanceRow.querySelector("td:nth-child(5)");
+
+    // Check if we have an active ledger
+    const activeLedger = TransactionManager.getActiveLedger();
+    if (!activeLedger) {
+      // No active ledger, disable input fields
+      startingDateInput.disabled = true;
+      startingBalanceCell.textContent = "No ledger selected";
+      return;
+    }
+
+    // Enable inputs since we have an active ledger
+    startingDateInput.disabled = false;
 
     // Load saved date if available
     try {
@@ -76,6 +88,24 @@ const LedgerController = {
   },
 
   renderLedger() {
+    // Check if we have an active ledger
+    const activeLedger = TransactionManager.getActiveLedger();
+    if (!activeLedger) {
+      // No active ledger, clear the transaction rows
+      LedgerRenderer.clearTransactionRows(this.ledgerBody);
+
+      // Update the starting balance row to show "No ledger selected"
+      this.initializeStartingBalance();
+
+      // Update totals to show zeros
+      this.updateTotals();
+      return;
+    }
+
+    // Add animation class
+    document.body.classList.add("ledger-changing");
+
+    // Render the ledger with transactions from the active ledger
     LedgerRenderer.renderLedger(this.ledgerBody);
 
     // Set up event listeners for newly created rows
@@ -103,6 +133,11 @@ const LedgerController = {
     if (window.LedgerSelection) {
       LedgerSelection.clearSelection();
     }
+
+    // Remove animation class after a short delay
+    setTimeout(() => {
+      document.body.classList.remove("ledger-changing");
+    }, 500);
   },
 
   setupEventListeners() {
@@ -171,6 +206,9 @@ const LedgerController = {
       const creditInput = row.querySelector("td:nth-child(3) input");
       const debitInput = row.querySelector("td:nth-child(4) input");
       const balanceCell = row.querySelector("td:nth-child(5)");
+
+      // Skip if inputs don't exist (might happen when no ledger is selected)
+      if (!creditInput || !debitInput || !balanceCell) return;
 
       // Check if either cell is in error state
       const creditCell = creditInput.closest("td");
@@ -250,6 +288,12 @@ const LedgerController = {
   },
 
   handleTransactionInput(row) {
+    // Check if we have an active ledger
+    if (!TransactionManager.getActiveLedger()) {
+      console.log("No active ledger, can't save transaction");
+      return;
+    }
+
     const dateInput = row.querySelector("td:nth-child(1) input");
     const descriptionInput = row.querySelector("td:nth-child(2) input");
     const creditInput = row.querySelector("td:nth-child(3) input");
@@ -506,6 +550,7 @@ const LedgerController = {
     this.formatCreditDisplay(creditInput);
   },
 
+  // Rest of the methods remain unchanged
   checkDescriptionField(row, descriptionInput, creditInput, debitInput) {
     // Only run this for the new transaction row
     if (row.id !== "add-transaction-row") return;
@@ -605,6 +650,7 @@ const LedgerController = {
       }, 500);
     }
   },
+
   // New helper method to enforce single value in the input field
   setupSingleValueInput(input) {
     // Store the last valid value
@@ -773,6 +819,7 @@ const LedgerController = {
       init: this.init.bind(this),
       updateTotals: this.updateTotals.bind(this),
       renderLedger: this.renderLedger.bind(this),
+      initializeStartingBalance: this.initializeStartingBalance.bind(this),
     };
   },
 };
