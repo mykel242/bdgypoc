@@ -341,6 +341,8 @@ const LedgerController = {
       this.formatDebitDisplay(debitInput);
       // Format any existing credit value
       this.formatCreditDisplay(creditInput);
+
+      checkDescriptionField();
     });
 
     debitInput.addEventListener("focus", () => {
@@ -377,7 +379,26 @@ const LedgerController = {
       this.updateTotals();
     });
 
+    descriptionInput.addEventListener("input", () => {
+      checkDescriptionField();
+    });
+
     descriptionInput.addEventListener("blur", () => {
+      const descContainer = descriptionInput.closest("td");
+
+      // When blurring, remove the animation but keep the attention style if needed
+      descContainer.classList.remove("description-needed");
+
+      // Only keep the attention style if we still need a description
+      const creditValue = parseFloat(creditInput.value || 0);
+      const debitValue = parseFloat(debitInput.value || 0);
+      const hasValue = creditValue > 0 || debitValue > 0;
+
+      if (!hasValue || descriptionInput.value.trim()) {
+        descContainer.classList.remove("description-attention");
+      }
+
+      // Then call the existing handler
       this.handleTransactionInput(row);
       this.updateTotals();
     });
@@ -419,6 +440,8 @@ const LedgerController = {
         }
         debitInput.style.color = "";
       }
+
+      checkDescriptionField();
     });
 
     creditInput.addEventListener("focus", () => {
@@ -456,6 +479,33 @@ const LedgerController = {
 
     // Format any existing debit value
     this.formatDebitDisplay(debitInput);
+  },
+
+  // Check description when credit/debit changes
+  checkDescriptionField() {
+    // Only run this for the new transaction row
+    if (row.id !== "add-transaction-row") return;
+
+    const creditValue = parseFloat(creditInput.value || 0);
+    const debitValue = parseFloat(debitInput.value || 0);
+    const hasValue = creditValue > 0 || debitValue > 0;
+    const descContainer = descriptionInput.closest("td");
+
+    if (hasValue && !descriptionInput.value.trim()) {
+      // Show animation if we have a credit/debit value but no description
+      descContainer.classList.add("description-needed");
+
+      // Add a subtle indication that will remain until description is filled
+      descContainer.classList.add("description-attention");
+    } else {
+      // Remove animation if description is filled or no values
+      descContainer.classList.remove("description-needed");
+
+      // If no values, also remove the attention style
+      if (!hasValue) {
+        descContainer.classList.remove("description-attention");
+      }
+    }
   },
 
   // Validate number input and show error state if invalid

@@ -319,3 +319,29 @@ input[type="number"].input-error {
         background-color: rgba(255, 220, 220, 0.6);
     }
 }
+
+/* Animation for description field that needs attention */
+@keyframes highlight-description {
+    0% {
+        background-color: rgba(255, 248, 225, 0.5);
+    }
+    50% {
+        background-color: rgba(255, 213, 79, 0.3);
+    }
+    100% {
+        background-color: rgba(255, 248, 225, 0.5);
+    }
+}
+
+/* Class to apply the animation */
+.description-needed {
+    animation: highlight-description 1.5s ease-in-out infinite;
+    border-left: 3px solid #ffc107 !important;
+    border-right: 3px solid #ffc107 !important;
+}
+
+/* Add a subtle border when animation stops but attention is still needed */
+.description-attention {
+    border-left: 2px solid #ffc107 !important;
+    background-color: rgba(255, 248, 225, 0.3);
+}
