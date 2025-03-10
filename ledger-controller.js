@@ -108,6 +108,7 @@ const LedgerController = {
     });
   },
 
+  // Updated updateTotals to handle invalid cells
   updateTotals() {
     console.log("updateTotals() called");
     const startingBalanceRow = document.querySelector(
@@ -161,6 +162,29 @@ const LedgerController = {
       const creditInput = row.querySelector("td:nth-child(3) input");
       const debitInput = row.querySelector("td:nth-child(4) input");
       const balanceCell = row.querySelector("td:nth-child(5)");
+
+      // Check if either cell is in error state
+      const creditCell = creditInput.closest("td");
+      const debitCell = debitInput.closest("td");
+      const hasError =
+        creditCell.classList.contains("invalid-cell") ||
+        debitCell.classList.contains("invalid-cell");
+
+      if (hasError) {
+        // For rows with errors, show 0.00 balance and add error class to balance
+        balanceCell.textContent = "0.00";
+        balanceCell.classList.add("balance-error");
+
+        // Add error class to the row
+        row.classList.add("row-with-error");
+
+        // Skip this row in the running balance calculation
+        return;
+      } else {
+        // Clear error state if previously set
+        balanceCell.classList.remove("balance-error");
+        row.classList.remove("row-with-error");
+      }
 
       const credit = parseFloat(creditInput.value || 0);
       const debit = parseFloat(debitInput.value || 0);
@@ -230,6 +254,19 @@ const LedgerController = {
       console.log("Set date to today:", dateInput.value);
     }
 
+    // Check if any inputs are in error state
+    const creditCell = creditInput.closest("td");
+    const debitCell = debitInput.closest("td");
+    const hasError =
+      creditCell.classList.contains("invalid-cell") ||
+      debitCell.classList.contains("invalid-cell");
+
+    // Don't save transactions with errors
+    if (hasError) {
+      console.log("Transaction has errors, not saving");
+      return;
+    }
+
     if (row.id === "add-transaction-row") {
       // Check if this is a filled transaction (description and either credit or debit)
       if (descriptionInput.value && (creditInput.value || debitInput.value)) {
@@ -280,7 +317,7 @@ const LedgerController = {
     const paidCheckbox = row.querySelector("td:nth-child(6) input");
     const clearedCheckbox = row.querySelector("td:nth-child(7) input");
 
-    // Set min attribute to 0 for credit and debit inputs to disallow negative numbers
+    // Set min attribute to 0 for credit and debit inputs
     creditInput.min = "0";
     debitInput.min = "0";
 
@@ -292,28 +329,27 @@ const LedgerController = {
 
     // Listen for credit input
     creditInput.addEventListener("input", () => {
-      // Ensure value is not negative
-      if (parseFloat(creditInput.value) < 0) {
-        creditInput.value = ""; // Clear negative values
-      }
-
       // If credit has value, clear debit
       if (creditInput.value) {
         debitInput.value = "";
+        // Also clear any error state from debit
+        debitInput.classList.remove("input-error");
+        const debitCell = debitInput.closest("td");
+        if (debitCell) debitCell.classList.remove("invalid-cell");
       }
     });
 
     // Listen for debit input and focus events
     debitInput.addEventListener("input", () => {
-      // Ensure value is not negative
-      if (parseFloat(debitInput.value) < 0) {
-        debitInput.value = ""; // Clear negative values
-      }
-
       // If debit has value, clear credit
       if (debitInput.value) {
         creditInput.value = "";
+        // Also clear any error state from credit
+        creditInput.classList.remove("input-error");
+        const creditCell = creditInput.closest("td");
+        if (creditCell) creditCell.classList.remove("invalid-cell");
       }
+
       this.formatDebitDisplay(debitInput);
     });
 
@@ -330,21 +366,24 @@ const LedgerController = {
     debitInput.addEventListener("blur", () => {
       console.log("Debit input blur event");
 
-      // Ensure no negative values on blur
-      if (parseFloat(debitInput.value) < 0) {
-        debitInput.value = "";
+      // Validate the value on blur
+      const isValid = this.validateNumberInput(debitInput);
+
+      // If valid, proceed with normal processing
+      if (isValid) {
+        // Hide input text and show formatted overlay
+        if (parseFloat(debitInput.value || 0) > 0) {
+          debitInput.style.color = "transparent";
+          const overlay = debitInput.parentNode.querySelector(".debit-overlay");
+          if (overlay) {
+            overlay.style.visibility = "visible";
+          }
+        }
+        this.formatDebitDisplay(debitInput);
+        this.handleTransactionInput(row);
       }
 
-      // Hide input text and show formatted overlay
-      if (parseFloat(debitInput.value || 0) > 0) {
-        debitInput.style.color = "transparent";
-        const overlay = debitInput.parentNode.querySelector(".debit-overlay");
-        if (overlay) {
-          overlay.style.visibility = "visible";
-        }
-      }
-      this.formatDebitDisplay(debitInput);
-      this.handleTransactionInput(row);
+      // Always update totals
       this.updateTotals();
     });
 
@@ -352,12 +391,15 @@ const LedgerController = {
     creditInput.addEventListener("blur", () => {
       console.log("Credit input blur event");
 
-      // Ensure no negative values on blur
-      if (parseFloat(creditInput.value) < 0) {
-        creditInput.value = "";
+      // Validate the value on blur
+      const isValid = this.validateNumberInput(creditInput);
+
+      // If valid, proceed with normal processing
+      if (isValid) {
+        this.handleTransactionInput(row);
       }
 
-      this.handleTransactionInput(row);
+      // Always update totals
       this.updateTotals();
     });
 
@@ -389,7 +431,138 @@ const LedgerController = {
     this.formatDebitDisplay(debitInput);
   },
 
-  // Updated formatDebitDisplay method in ledger-controller.js
+  // Validate number input and show error state if invalid
+  validateNumberInput(input) {
+    const value = input.value.trim();
+
+    // If empty, it's valid (zero)
+    if (!value) {
+      input.classList.remove("input-error");
+      const cell = input.closest("td");
+      if (cell) cell.classList.remove("invalid-cell");
+      return true;
+    }
+
+    // Test if the value is a valid positive number
+    const isValid =
+      /^(\d*\.?\d+|\d+\.?\d*)$/.test(value) && parseFloat(value) >= 0;
+
+    if (!isValid) {
+      // Mark as invalid
+      input.classList.add("input-error");
+      const cell = input.closest("td");
+      if (cell) cell.classList.add("invalid-cell");
+      return false;
+    } else {
+      // Clear any error state
+      input.classList.remove("input-error");
+      const cell = input.closest("td");
+      if (cell) cell.classList.remove("invalid-cell");
+
+      // Format to ensure proper numeric value
+      input.value = parseFloat(value).toString();
+      return true;
+    }
+  },
+
+  // New helper to clean up numeric input values
+  cleanupNumberValue(input) {
+    if (!input.value) return;
+
+    let value = input.value;
+
+    // First, try to extract a proper number
+    const matches = value.match(/(\d*\.?\d*)/);
+    if (matches && matches[0]) {
+      // If we got something that looks like a number
+      const cleanValue = matches[0];
+
+      // If it's different from what's there, update it
+      if (cleanValue !== value) {
+        input.value = cleanValue;
+      }
+    }
+
+    // Ensure we don't have multiple decimal points
+    const decimalCount = (value.match(/\./g) || []).length;
+    if (decimalCount > 1) {
+      // Keep only the first decimal and everything before plus digits after
+      const parts = value.split(".");
+      input.value = parts[0] + "." + parts.slice(1).join("");
+    }
+
+    // Handle specifically the case of double values (e.g., "111.00 2222")
+    const spaceSeparated = value.split(/\s+/);
+    if (spaceSeparated.length > 1) {
+      // Just keep the first value
+      input.value = spaceSeparated[0];
+
+      // Visual feedback
+      input.classList.add("input-error");
+      setTimeout(() => {
+        input.classList.remove("input-error");
+      }, 500);
+    }
+  },
+  // New helper method to enforce single value in the input field
+  setupSingleValueInput(input) {
+    // Store the last valid value
+    input.setAttribute("data-last-valid-value", "");
+
+    // Check on keydown (before value changes)
+    input.addEventListener("keydown", (e) => {
+      // Allow navigation keys and special keys
+      const allowedKeys = [
+        "Backspace",
+        "Delete",
+        "ArrowLeft",
+        "ArrowRight",
+        "Tab",
+        "Enter",
+      ];
+      if (allowedKeys.includes(e.key)) return;
+
+      // Allow numeric keys, period, and numpad
+      if (
+        /^\d$/.test(e.key) ||
+        e.key === "." ||
+        (e.key.startsWith("Numpad") && !isNaN(parseInt(e.key.slice(6))))
+      ) {
+        // If input already has a value and selection is not replacing everything
+        if (
+          input.value &&
+          (input.selectionStart !== 0 ||
+            input.selectionEnd !== input.value.length)
+        ) {
+          e.preventDefault();
+
+          // Add shake animation for visual feedback
+          input.classList.add("input-error");
+          setTimeout(() => {
+            input.classList.remove("input-error");
+          }, 500);
+        }
+      } else {
+        // Block all other keys
+        e.preventDefault();
+      }
+    });
+
+    // Backup validation on input event
+    input.addEventListener("input", function () {
+      const currentValue = this.value;
+
+      // If multiple values detected, revert to last valid value
+      if ((currentValue.match(/\./g) || []).length > 1) {
+        this.value = this.getAttribute("data-last-valid-value") || "";
+        return;
+      }
+
+      // Save valid value
+      this.setAttribute("data-last-valid-value", this.value);
+    });
+  },
+
   formatDebitDisplay(input) {
     // Get the raw value
     const value = parseFloat(input.value || 0);

@@ -241,3 +241,81 @@ tr[data-row-type="starting-balance"].negative-balance .starting-balance-input {
 tr.selected-row.negative-balance {
     background-color: rgba(255, 235, 235, 0.7) !important;
 }
+/* Styles for input fields with existing values */
+input[type="number"][data-last-valid-value]:not([data-last-valid-value=""]) {
+    background-color: #f9f9f9;
+}
+
+/* Visual feedback when attempting to add more than one value */
+input[type="number"].input-error {
+    animation: flash 0.5s ease-out;
+}
+
+@keyframes flash {
+    0% {
+        background-color: rgba(255, 235, 235, 0.8);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Improve focus styles to make current input more obvious */
+input[type="number"]:focus {
+    background-color: #fff;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+    z-index: 1;
+    position: relative;
+}
+/* Styles for invalid input cells */
+.invalid-cell {
+    background-color: rgba(255, 220, 220, 0.6);
+    position: relative;
+}
+
+/* Add a red underline to indicate the error */
+.invalid-cell::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background-color: #e74c3c;
+}
+
+/* Style for inputs within invalid cells */
+.invalid-cell input {
+    color: #c0392b;
+}
+
+/* Style for balance cell in error state */
+.balance-error {
+    color: #c0392b !important;
+    font-style: italic;
+}
+
+/* Style for entire row with error */
+.row-with-error {
+    background-color: rgba(255, 235, 235, 0.3) !important;
+}
+
+/* Override negative-balance styling when there's an error */
+.row-with-error.negative-balance {
+    background-color: rgba(255, 220, 220, 0.4) !important;
+}
+
+/* Visual feedback animation for invalid input */
+input[type="number"].input-error {
+    animation: flash-error 0.5s ease-out;
+    background-color: rgba(255, 220, 220, 0.6);
+}
+
+@keyframes flash-error {
+    0% {
+        background-color: rgba(255, 180, 180, 0.9);
+    }
+    100% {
+        background-color: rgba(255, 220, 220, 0.6);
+    }
+}
