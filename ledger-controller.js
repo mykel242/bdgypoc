@@ -342,7 +342,12 @@ const LedgerController = {
       // Format any existing credit value
       this.formatCreditDisplay(creditInput);
 
-      checkDescriptionField();
+      this.checkDescriptionField(
+        row,
+        descriptionInput,
+        creditInput,
+        debitInput,
+      );
     });
 
     debitInput.addEventListener("focus", () => {
@@ -380,7 +385,12 @@ const LedgerController = {
     });
 
     descriptionInput.addEventListener("input", () => {
-      checkDescriptionField();
+      this.checkDescriptionField(
+        row,
+        descriptionInput,
+        creditInput,
+        debitInput,
+      );
     });
 
     descriptionInput.addEventListener("blur", () => {
@@ -441,7 +451,12 @@ const LedgerController = {
         debitInput.style.color = "";
       }
 
-      checkDescriptionField();
+      this.checkDescriptionField(
+        row,
+        descriptionInput,
+        creditInput,
+        debitInput,
+      );
     });
 
     creditInput.addEventListener("focus", () => {
@@ -481,8 +496,7 @@ const LedgerController = {
     this.formatDebitDisplay(debitInput);
   },
 
-  // Check description when credit/debit changes
-  checkDescriptionField() {
+  checkDescriptionField(row, descriptionInput, creditInput, debitInput) {
     // Only run this for the new transaction row
     if (row.id !== "add-transaction-row") return;
 
