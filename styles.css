@@ -92,32 +92,176 @@ input[type="number"]::-webkit-inner-spin-button {
     margin: 0;
 }
 
-/* Add these CSS rules to your styles.css file */
+/* Column width and alignment adjustments */
+/* Improve styling for credit and debit columns */
+td:nth-child(3),
+td:nth-child(4),
+th:nth-child(3),
+th:nth-child(4) {
+    width: 100px; /* Consistent width */
+    text-align: right;
+}
 
-/* Improved date input styling */
-input[type="date"] {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 4px 24px 4px 8px; /* Add padding for the calendar icon */
+/* Ensure number inputs are right-aligned and borderless */
+input[type="number"] {
+    text-align: right;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding-right: 5px;
+}
+
+/* Make "Paid" and "Cleared" columns the same width and centered */
+th:nth-child(6),
+th:nth-child(7),
+td:nth-child(6),
+td:nth-child(7) {
+    width: 80px; /* Fixed width for both columns */
+    text-align: center;
+}
+
+/* Center the checkboxes in their cells */
+td:nth-child(6) input[type="checkbox"],
+td:nth-child(7) input[type="checkbox"] {
+    width: auto; /* Override the 100% width */
+    margin: 0 auto;
+    display: block;
+}
+
+/* Hide borders on date and text input fields */
+input[type="date"],
+input[type="text"] {
+    border: none;
+    background: transparent;
+    outline: none; /* Remove focus outline */
+}
+
+/* Row selection styles */
+tr.selected-row {
+    background-color: #f0f8ff; /* Light blue background */
+    box-shadow: 0 0 0 1px #4a90e2; /* Blue outline */
     position: relative;
 }
 
-/* Fix the calendar icon spacing */
-input[type="date"]::-webkit-calendar-picker-indicator {
+/* Make sure the selected row shows above others */
+tr.selected-row td {
+    position: relative;
+    z-index: 1;
+}
+
+/* Drag handle styles */
+.row-handle {
     position: absolute;
-    right: 4px;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #888;
+    opacity: 0.7;
+}
+
+.row-handle:hover {
+    opacity: 1;
+    color: #555;
+}
+
+/* Action buttons styles */
+.row-actions {
+    position: absolute;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
+    display: flex;
+    gap: 8px;
 }
 
-/* Fix the year display */
-input[type="date"]::-webkit-datetime-edit-year-field {
-    padding-right: 1px;
+.row-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #555;
+    transition:
+        background-color 0.2s,
+        color 0.2s;
 }
 
-/* Remove spinner buttons from number inputs */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
+.row-actions button:hover {
+    background-color: #f0f0f0;
+    color: #000;
+}
+
+.action-delete:hover {
+    color: #e53935; /* Red color on hover */
+}
+
+/* Style for starting balance and totals rows */
+tr[data-row-type="starting-balance"] {
+    background-color: #f5f5f5;
+    font-weight: 500;
+}
+
+tr[data-row-type="totals"] {
+    background-color: #f0f0f0;
+    font-weight: bold;
+    border-top: 2px solid #ddd;
+}
+
+/* Ensure table cells have proper positioning for the added elements */
+#ledger td {
+    position: relative;
+}
+
+/* Make first cell has padding for the drag handle */
+#ledger tr td:first-child {
+    padding-left: 24px;
+}
+
+/* Make last cell have padding for action buttons */
+#ledger tr td:last-child {
+    padding-right: 40px;
+}
+
+/* Add subtle hover effect for all transaction rows */
+#ledger
+    tbody
+    tr:not([data-row-type="starting-balance"]):not(
+        [data-row-type="totals"]
+    ):hover {
+    background-color: #f9f9f9;
+}
+
+/* Improve form input appearance */
+input:focus {
+    background-color: rgba(
+        240,
+        248,
+        255,
+        0.3
+    ); /* Very light blue background when focused */
+}
+
+/* Ensure date inputs look consistent across browsers */
+input[type="date"] {
+    font-family: Arial, sans-serif;
+    appearance: none;
     -webkit-appearance: none;
-    margin: 0;
+    display: block;
+    padding: 5px 0;
+}
+
+/* Remove browser default focus styles and add our own */
+input:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px rgba(74, 144, 226, 0.3);
 }

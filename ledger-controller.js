@@ -14,6 +14,7 @@ const LedgerController = {
     this.setupEventListeners();
   },
 
+  // Update to the LedgerController's initializeStartingBalance method
   initializeStartingBalance() {
     const startingBalanceRow = document.querySelector(
       'tr[data-row-type="starting-balance"]',
@@ -25,7 +26,7 @@ const LedgerController = {
     const startingBalanceCell =
       startingBalanceRow.querySelector("td:nth-child(5)");
 
-    // Load saved date if available - ensure we're using the fixed version
+    // Load saved date if available
     try {
       const savedDate = TransactionManager.getStartingBalanceDate();
       startingDateInput.value = savedDate;
@@ -40,17 +41,38 @@ const LedgerController = {
       TransactionManager.saveStartingBalanceDate(startingDateInput.value);
     });
 
-    // Make balance editable
-    startingBalanceCell.setAttribute("contenteditable", "true");
-    startingBalanceCell.addEventListener("blur", () => {
-      const newBalance = parseFloat(startingBalanceCell.textContent) || 0;
+    // Make balance editable but with better controls
+    startingBalanceCell.removeAttribute("contenteditable"); // Remove contenteditable
+
+    // Create a properly formatted input
+    const balanceInput = document.createElement("input");
+    balanceInput.type = "number";
+    balanceInput.step = "0.01";
+    balanceInput.className = "starting-balance-input";
+
+    // Load starting balance
+    const balance = TransactionManager.getStartingBalance();
+    balanceInput.value = balance.toFixed(2);
+
+    // Clear the cell and add the input
+    startingBalanceCell.textContent = "";
+    startingBalanceCell.appendChild(balanceInput);
+
+    // Add event listener for balance changes
+    balanceInput.addEventListener("blur", () => {
+      const newBalance = parseFloat(balanceInput.value) || 0;
+      // Ensure proper formatting
+      balanceInput.value = newBalance.toFixed(2);
       TransactionManager.saveStartingBalance(newBalance);
       this.updateTotals();
     });
 
-    // Load starting balance
-    const balance = TransactionManager.getStartingBalance();
-    startingBalanceCell.textContent = balance.toFixed(2);
+    // Also listen for Enter key
+    balanceInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        balanceInput.blur();
+      }
+    });
   },
 
   renderLedger() {
@@ -67,6 +89,11 @@ const LedgerController = {
 
     // Initial totals update
     this.updateTotals();
+
+    // Clear any selection when re-rendering
+    if (window.LedgerSelection) {
+      LedgerSelection.clearSelection();
+    }
   },
 
   setupEventListeners() {
@@ -88,9 +115,21 @@ const LedgerController = {
     );
     if (!startingBalanceRow) return;
 
-    const startingBalanceCell =
-      startingBalanceRow.querySelector("td:nth-child(5)");
-    const startingBalance = parseFloat(startingBalanceCell.textContent) || 0;
+    // Get starting balance from the input element
+    const startingBalanceInput = startingBalanceRow.querySelector(
+      ".starting-balance-input",
+    );
+    let startingBalance = 0;
+
+    if (startingBalanceInput) {
+      // Get value from input
+      startingBalance = parseFloat(startingBalanceInput.value) || 0;
+    } else {
+      // Fallback to getting from cell text if input doesn't exist yet
+      const startingBalanceCell =
+        startingBalanceRow.querySelector("td:nth-child(5)");
+      startingBalance = parseFloat(startingBalanceCell.textContent) || 0;
+    }
 
     const rows = Array.from(
       this.ledgerBody.querySelectorAll(
@@ -132,8 +171,10 @@ const LedgerController = {
       const debitTotalCell = totalsRow.querySelector("td:nth-child(4)");
       if (totalDebit > 0) {
         debitTotalCell.textContent = `(${totalDebit.toFixed(2)})`;
+        debitTotalCell.classList.add("negative-amount");
       } else {
         debitTotalCell.textContent = "0.00";
+        debitTotalCell.classList.remove("negative-amount");
       }
 
       totalsRow.querySelector("td:nth-child(5)").textContent =
@@ -292,8 +333,12 @@ const LedgerController = {
 
     // Format any existing debit value
     this.formatDebitDisplay(debitInput);
+
+    // Note: Row selection is handled by LedgerSelection module's global click handler
+    // No need for additional row click handlers here
   },
 
+  // Updated formatDebitDisplay method in ledger-controller.js
   formatDebitDisplay(input) {
     // Get the raw value
     const value = parseFloat(input.value || 0);
@@ -306,7 +351,7 @@ const LedgerController = {
       let overlay = input.parentNode.querySelector(".debit-overlay");
       if (!overlay) {
         overlay = document.createElement("div");
-        overlay.className = "debit-overlay";
+        overlay.className = "debit-overlay negative-amount"; // Add negative-amount class
         overlay.style.position = "absolute";
         overlay.style.top = "0";
         overlay.style.right = "0";

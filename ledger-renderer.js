@@ -32,10 +32,23 @@ const LedgerRenderer = {
     rows.forEach((row) => row.remove());
   },
 
+  // Update to createTransactionRow method in ledger-renderer.js
   createTransactionRow(transaction) {
     const row = document.createElement("tr");
     row.dataset.transactionId = transaction.id;
     row.dataset.sequence = transaction.sequence;
+
+    // Add a class to newly created transactions for animation
+    // We'll identify newly created transactions by checking if they were created in the last 5 seconds
+    const fiveSecondsAgo = new Date(new Date().getTime() - 5000).toISOString();
+    if (transaction.createdAt && transaction.createdAt > fiveSecondsAgo) {
+      row.classList.add("new-transaction");
+
+      // Remove the class after animation completes
+      setTimeout(() => {
+        row.classList.remove("new-transaction");
+      }, 2000); // Match animation duration
+    }
 
     // Create date cell
     const dateCell = document.createElement("td");

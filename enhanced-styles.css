@@ -1,0 +1,208 @@
+/* enhanced-styles.css - Additional styling for expense tracker */
+
+/* Improved table layout */
+table#ledger {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    overflow: hidden; /* Ensures the border-radius applies to the table */
+    background: white;
+}
+
+/* Better header styling */
+#ledger thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px 8px;
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Improved row styling */
+#ledger tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s ease;
+}
+
+#ledger tbody tr:last-child {
+    border-bottom: none;
+}
+
+/* Zebra striping for better readability */
+#ledger
+    tbody
+    tr:nth-child(even):not(.selected-row):not(
+        [data-row-type="starting-balance"]
+    ):not([data-row-type="totals"]) {
+    background-color: #fcfcfc;
+}
+
+/* New transaction row styling */
+#add-transaction-row {
+    background-color: #f9fbff !important;
+    border-top: 1px dashed #ccc;
+}
+
+#add-transaction-row input::placeholder {
+    color: #aaa;
+    font-style: italic;
+}
+
+/* Animation for newly added rows */
+@keyframes highlight-new-row {
+    from {
+        background-color: #f0f7ff;
+    }
+    to {
+        background-color: transparent;
+    }
+}
+
+.new-transaction {
+    animation: highlight-new-row 2s ease;
+}
+
+/* Better input field styling */
+input[type="text"],
+input[type="date"],
+input[type="number"] {
+    padding: 6px 4px;
+    transition: background-color 0.2s;
+}
+
+input[type="checkbox"] {
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+/* Better styling for the contenteditable starting balance */
+[contenteditable="true"] {
+    border-bottom: 1px dashed #ccc;
+    padding: 2px 4px;
+    transition: background-color 0.2s;
+}
+
+[contenteditable="true"]:hover {
+    background-color: #f8f9fa;
+}
+
+[contenteditable="true"]:focus {
+    background-color: #f0f7ff;
+    border-bottom: 1px solid #4a90e2;
+    outline: none;
+}
+
+/* Negative amounts (for debit) */
+.negative-amount {
+    color: #dc3545;
+}
+
+/* Layout enhancements */
+body {
+    margin: 0;
+    padding: 20px;
+    background-color: #f9f9f9;
+    min-height: 100vh;
+}
+
+h1 {
+    color: #343a40;
+    margin-bottom: 24px;
+}
+
+/* Responsive table improvements */
+@media (max-width: 768px) {
+    table {
+        width: 100%;
+    }
+
+    th,
+    td {
+        padding: 6px 4px;
+    }
+}
+
+/* Enhanced row selection styles */
+tr.selected-row {
+    background-color: #e8f4fd !important; /* Light blue background overrides zebra striping */
+    box-shadow: 0 0 0 1px #4a90e2; /* Blue outline */
+}
+
+.row-handle {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.row-handle:hover {
+    opacity: 1;
+}
+
+/* Better action button styling */
+.row-actions button {
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+.row-actions button:hover {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.action-delete:hover {
+    background-color: #ffefef;
+}
+
+/* Improved totals row */
+tr[data-row-type="totals"] {
+    font-weight: bold;
+    background-color: #f8f9fa !important;
+    border-top: 2px solid #dee2e6;
+}
+
+/* Better starting balance row */
+tr[data-row-type="starting-balance"] {
+    background-color: #f8f9fa !important;
+    font-style: italic;
+}
+
+/* Starting balance specific styles */
+tr[data-row-type="starting-balance"] {
+    background-color: #f0f7ff !important; /* Light blue background */
+    font-weight: 500;
+}
+
+/* The date cell in starting balance row */
+tr[data-row-type="starting-balance"] td:first-child {
+    border-left: 3px solid #4a90e2; /* Blue left border */
+}
+
+/* The description cell */
+tr[data-row-type="starting-balance"] td:nth-child(2) {
+    font-weight: 600;
+    color: #333;
+}
+
+/* The balance input in starting balance row */
+.starting-balance-input {
+    font-family: "Courier New", monospace;
+    text-align: right;
+    width: 100%;
+    border: none;
+    background-color: transparent;
+    font-size: 14px;
+    padding: 4px;
+    border-bottom: 1px dashed #4a90e2;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.starting-balance-input:focus {
+    outline: none;
+    background-color: white;
+    border-bottom: 1px solid #4a90e2;
+    box-shadow: 0 1px 0 0 rgba(74, 144, 226, 0.2);
+}
+
+/* Prevent selection of starting balance row */
+tr[data-row-type="starting-balance"] {
+    user-select: none;
+}
