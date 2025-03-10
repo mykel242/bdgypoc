@@ -124,11 +124,25 @@ const LedgerController = {
     if (startingBalanceInput) {
       // Get value from input
       startingBalance = parseFloat(startingBalanceInput.value) || 0;
+
+      // Apply negative balance styling to starting balance row if needed
+      if (startingBalance < 0) {
+        startingBalanceRow.classList.add("negative-balance");
+      } else {
+        startingBalanceRow.classList.remove("negative-balance");
+      }
     } else {
       // Fallback to getting from cell text if input doesn't exist yet
       const startingBalanceCell =
         startingBalanceRow.querySelector("td:nth-child(5)");
       startingBalance = parseFloat(startingBalanceCell.textContent) || 0;
+
+      // Apply negative balance styling to starting balance row if needed
+      if (startingBalance < 0) {
+        startingBalanceRow.classList.add("negative-balance");
+      } else {
+        startingBalanceRow.classList.remove("negative-balance");
+      }
     }
 
     const rows = Array.from(
@@ -157,6 +171,13 @@ const LedgerController = {
 
       // Update balance cell
       balanceCell.textContent = runningBalance.toFixed(2);
+
+      // Apply negative balance styling if needed
+      if (runningBalance < 0) {
+        row.classList.add("negative-balance");
+      } else {
+        row.classList.remove("negative-balance");
+      }
     });
 
     // Update totals row
@@ -177,8 +198,15 @@ const LedgerController = {
         debitTotalCell.classList.remove("negative-amount");
       }
 
-      totalsRow.querySelector("td:nth-child(5)").textContent =
-        runningBalance.toFixed(2);
+      const totalsBalanceCell = totalsRow.querySelector("td:nth-child(5)");
+      totalsBalanceCell.textContent = runningBalance.toFixed(2);
+
+      // Apply negative styling to totals row balance if needed
+      if (runningBalance < 0) {
+        totalsBalanceCell.classList.add("negative-amount");
+      } else {
+        totalsBalanceCell.classList.remove("negative-amount");
+      }
     }
 
     console.log("Final totals:", {

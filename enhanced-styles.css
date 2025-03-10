@@ -206,3 +206,38 @@ tr[data-row-type="starting-balance"] td:nth-child(2) {
 tr[data-row-type="starting-balance"] {
     user-select: none;
 }
+
+/* Styling for rows with negative balance */
+tr.negative-balance {
+    background-color: rgba(
+        255,
+        235,
+        235,
+        0.5
+    ) !important; /* Very light red background */
+}
+
+tr.negative-balance td:nth-child(5) {
+    color: #e74c3c; /* Red text for the balance amount */
+    font-weight: 500; /* Make it slightly bolder */
+}
+
+/* Special handling for starting balance row */
+tr[data-row-type="starting-balance"].negative-balance {
+    background-color: rgba(
+        255,
+        235,
+        235,
+        0.7
+    ) !important; /* Slightly more obvious for starting balance */
+    border-left: 3px solid #e74c3c !important; /* Red left border instead of blue */
+}
+
+tr[data-row-type="starting-balance"].negative-balance .starting-balance-input {
+    color: #e74c3c; /* Red text for the input value */
+}
+
+/* Ensure the negative-balance class overrides the selected-row styling */
+tr.selected-row.negative-balance {
+    background-color: rgba(255, 235, 235, 0.7) !important;
+}
