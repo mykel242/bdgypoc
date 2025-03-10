@@ -1,6 +1,9 @@
-// script.js - Simplified
+// script.js
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize the controller
+  // Initialize the ledger manager first (handles ledger selection and creation)
+  LedgerManager.init();
+
+  // Initialize the controller (manages transactions for the active ledger)
   LedgerController.init();
 
   // Initialize the selection module
