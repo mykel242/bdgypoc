@@ -327,18 +327,6 @@ const LedgerController = {
       this.handleTransactionInput(row);
     });
 
-    // Listen for credit input
-    creditInput.addEventListener("input", () => {
-      // If credit has value, clear debit
-      if (creditInput.value) {
-        debitInput.value = "";
-        // Also clear any error state from debit
-        debitInput.classList.remove("input-error");
-        const debitCell = debitInput.closest("td");
-        if (debitCell) debitCell.classList.remove("invalid-cell");
-      }
-    });
-
     // Listen for debit input and focus events
     debitInput.addEventListener("input", () => {
       // If debit has value, clear credit
@@ -351,6 +339,8 @@ const LedgerController = {
       }
 
       this.formatDebitDisplay(debitInput);
+      // Format any existing credit value
+      this.formatCreditDisplay(creditInput);
     });
 
     debitInput.addEventListener("focus", () => {
@@ -387,22 +377,6 @@ const LedgerController = {
       this.updateTotals();
     });
 
-    // Update on blur for other inputs
-    creditInput.addEventListener("blur", () => {
-      console.log("Credit input blur event");
-
-      // Validate the value on blur
-      const isValid = this.validateNumberInput(creditInput);
-
-      // If valid, proceed with normal processing
-      if (isValid) {
-        this.handleTransactionInput(row);
-      }
-
-      // Always update totals
-      this.updateTotals();
-    });
-
     descriptionInput.addEventListener("blur", () => {
       this.handleTransactionInput(row);
       this.updateTotals();
@@ -425,6 +399,59 @@ const LedgerController = {
           input.blur();
         }
       });
+    });
+
+    creditInput.addEventListener("input", () => {
+      // If credit has value, clear debit
+      if (creditInput.value) {
+        debitInput.value = "";
+        // Also clear any error state from debit
+        debitInput.classList.remove("input-error");
+        const debitCell = debitInput.closest("td");
+        if (debitCell) debitCell.classList.remove("invalid-cell");
+
+        // Clear debit overlay if exists
+        const debitOverlay =
+          debitInput.parentNode.querySelector(".debit-overlay");
+        if (debitOverlay) {
+          debitOverlay.style.visibility = "hidden";
+          debitOverlay.textContent = "";
+        }
+        debitInput.style.color = "";
+      }
+    });
+
+    creditInput.addEventListener("focus", () => {
+      // Show actual input text when focused
+      creditInput.style.color = "";
+      const overlay = creditInput.parentNode.querySelector(".credit-overlay");
+      if (overlay) {
+        overlay.style.visibility = "hidden";
+      }
+    });
+
+    creditInput.addEventListener("blur", () => {
+      // Validate the value on blur
+      const isValid = this.validateNumberInput(creditInput);
+
+      // If valid, proceed with normal processing
+      if (isValid) {
+        const value = parseFloat(creditInput.value || 0);
+        if (value > 0) {
+          // Apply formatting and hide input text
+          this.formatCreditDisplay(creditInput);
+          creditInput.style.color = "transparent";
+          const overlay =
+            creditInput.parentNode.querySelector(".credit-overlay");
+          if (overlay) {
+            overlay.style.visibility = "visible";
+          }
+        }
+        this.handleTransactionInput(row);
+      }
+
+      // Always update totals
+      this.updateTotals();
     });
 
     // Format any existing debit value
@@ -608,6 +635,58 @@ const LedgerController = {
     } else {
       // Remove overlay if exists and value is 0
       const overlay = input.parentNode.querySelector(".debit-overlay");
+      if (overlay) {
+        overlay.textContent = "";
+      }
+      input.style.color = "";
+    }
+  },
+
+  formatCreditDisplay(input) {
+    // Get the raw value
+    const value = parseFloat(input.value || 0);
+
+    if (value > 0) {
+      // Format with 2 decimal places
+      const displayValue = `${value.toFixed(2)}`;
+
+      // Create a formatting overlay if it doesn't exist
+      let overlay = input.parentNode.querySelector(".credit-overlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.className = "credit-overlay";
+        overlay.style.position = "absolute";
+        overlay.style.top = "0";
+        overlay.style.right = "0";
+        overlay.style.bottom = "0";
+        overlay.style.left = "0";
+        overlay.style.pointerEvents = "none";
+        overlay.style.textAlign = "right";
+        overlay.style.paddingRight = "8px";
+        overlay.style.fontFamily = "Courier New, monospace";
+        overlay.style.fontSize = "14px";
+        overlay.style.display = "flex";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "flex-end";
+
+        // Ensure parent has position
+        input.parentNode.style.position = "relative";
+        input.parentNode.appendChild(overlay);
+      }
+
+      overlay.textContent = displayValue;
+
+      // Hide input value visually when not focused
+      if (document.activeElement !== input) {
+        input.style.color = "transparent";
+        overlay.style.visibility = "visible";
+      } else {
+        input.style.color = "";
+        overlay.style.visibility = "hidden";
+      }
+    } else {
+      // Remove overlay if exists and value is 0
+      const overlay = input.parentNode.querySelector(".credit-overlay");
       if (overlay) {
         overlay.textContent = "";
       }
