@@ -87,6 +87,15 @@ const LedgerController = {
       this.setupRowListeners(row);
     });
 
+    // Format all credit/debit fields on initial render
+    transactionRows.forEach((row) => {
+      const creditInput = row.querySelector("td:nth-child(3) input");
+      const debitInput = row.querySelector("td:nth-child(4) input");
+
+      if (creditInput) this.formatCreditDisplay(creditInput);
+      if (debitInput) this.formatDebitDisplay(debitInput);
+    });
+
     // Initial totals update
     this.updateTotals();
 
@@ -339,7 +348,6 @@ const LedgerController = {
       }
 
       this.formatDebitDisplay(debitInput);
-      // Format any existing credit value
       this.formatCreditDisplay(creditInput);
 
       this.checkDescriptionField(
@@ -377,6 +385,7 @@ const LedgerController = {
           }
         }
         this.formatDebitDisplay(debitInput);
+        this.formatCreditDisplay(creditInput);
         this.handleTransactionInput(row);
       }
 
@@ -494,6 +503,7 @@ const LedgerController = {
 
     // Format any existing debit value
     this.formatDebitDisplay(debitInput);
+    this.formatCreditDisplay(creditInput);
   },
 
   checkDescriptionField(row, descriptionInput, creditInput, debitInput) {
