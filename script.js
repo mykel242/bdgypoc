@@ -1,9 +1,44 @@
 // script2.js
+//
+//
+// Simple date normalization function
+function normalizeDate(dateString) {
+  if (!dateString) {
+    return new Date().toISOString().split("T")[0]; // Default to today
+  }
+
+  // Check if already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+
+  // Check for MM/DD/YY format
+  const mmddyyRegex = /^(\d{2})\/(\d{2})\/(\d{2})$/;
+  if (mmddyyRegex.test(dateString)) {
+    const match = dateString.match(mmddyyRegex);
+    return `20${match[3]}-${match[1]}-${match[2]}`;
+  }
+
+  // Attempt to parse as a date
+  try {
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split("T")[0];
+    }
+  } catch (e) {
+    // Fall through to default
+  }
+
+  // Default to today's date if parsing fails
+  return new Date().toISOString().split("T")[0];
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const ledgerBody = document.querySelector("#ledger tbody");
 
   // Expose functions for debugging
   window.updateTotals = updateTotals;
+  window.normalizeDate = normalizeDate; // Expose for debugging
 
   // Load or initialize starting balance
   // Updated initializeStartingBalance function
@@ -40,7 +75,6 @@ document.addEventListener("DOMContentLoaded", () => {
     startingBalanceCell.textContent = balance.toFixed(2);
   }
 
-  // Function to update totals
   function updateTotals() {
     console.log("updateTotals() called");
     const startingBalanceRow = document.querySelector(
@@ -107,7 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Function to handle transaction input
   function handleTransactionInput(row) {
     const dateInput = row.querySelector("td:nth-child(1) input");
     const descriptionInput = row.querySelector("td:nth-child(2) input");
@@ -226,11 +259,36 @@ document.addEventListener("DOMContentLoaded", () => {
     const paidCheckbox = row.querySelector("td:nth-child(6) input");
     const clearedCheckbox = row.querySelector("td:nth-child(7) input");
 
-    // Add date change event listener
-    dateInput.addEventListener("change", () => {
-      console.log("Date changed to:", dateInput.value);
-      handleTransactionInput(row);
-    });
+    // Fix date inputs
+    if (dateInput && dateInput.type === "date") {
+      // Ensure valid date format
+      dateInput.value = normalizeDate(dateInput.value);
+
+      // Add date change event listener
+      dateInput.addEventListener("change", () => {
+        console.log("Date changed to:", dateInput.value);
+        handleTransactionInput(row);
+      });
+
+      // Fix for Tab key issues (optional - only if needed)
+      dateInput.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+          // Prevent multiple date pickers from appearing
+          e.target.blur();
+          // Allow the tab event to continue
+          setTimeout(() => {
+            const nextInput = e.shiftKey
+              ? e.target.parentElement.previousElementSibling?.querySelector(
+                  "input",
+                )
+              : e.target.parentElement.nextElementSibling?.querySelector(
+                  "input",
+                );
+            if (nextInput) nextInput.focus();
+          }, 10);
+        }
+      });
+    }
 
     // Listen for credit input
     creditInput.addEventListener("input", () => {
@@ -309,6 +367,22 @@ document.addEventListener("DOMContentLoaded", () => {
     formatDebitDisplay(debitInput);
   }
 
+  function fixAllDates() {
+    document.querySelectorAll('input[type="date"]').forEach((input) => {
+      input.value = normalizeDate(input.value);
+
+      // If part of a transaction, update the stored data
+      const row = input.closest("tr");
+      if (row && row.dataset.transactionId) {
+        TransactionManager.updateTransaction(row.dataset.transactionId, {
+          date: input.value,
+        });
+      } else if (row && row.dataset.rowType === "starting-balance") {
+        TransactionManager.saveStartingBalanceDate(input.value);
+      }
+    });
+  }
+
   // Initialize everything
   function initialize() {
     console.log("Initializing expense tracker");
@@ -318,6 +392,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Render the ledger with stored transactions
     LedgerRenderer.renderLedger(ledgerBody);
+
+    // Fix all dates
+    fixAllDates();
 
     // Set up listeners for all rows (including new transaction row)
     const transactionRows = ledgerBody.querySelectorAll(

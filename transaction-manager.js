@@ -33,7 +33,7 @@ const TransactionManager = {
 
   getStartingBalanceDate() {
     const stored = localStorage.getItem("startingBalanceDate");
-    return stored || new Date().toISOString().split("T")[0];
+    return normalizeDate(stored);
   },
 
   saveStartingBalanceDate(date) {

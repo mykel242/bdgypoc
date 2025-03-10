@@ -63,3 +63,61 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
     -moz-appearance: textfield;
 }
+
+/* Improved date input styling */
+input[type="date"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px 24px 4px 8px; /* Add padding for the calendar icon */
+    position: relative;
+}
+
+/* Fix the calendar icon spacing */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Fix the year display */
+input[type="date"]::-webkit-datetime-edit-year-field {
+    padding-right: 1px;
+}
+
+/* Remove spinner buttons from number inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Add these CSS rules to your styles.css file */
+
+/* Improved date input styling */
+input[type="date"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px 24px 4px 8px; /* Add padding for the calendar icon */
+    position: relative;
+}
+
+/* Fix the calendar icon spacing */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Fix the year display */
+input[type="date"]::-webkit-datetime-edit-year-field {
+    padding-right: 1px;
+}
+
+/* Remove spinner buttons from number inputs */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}

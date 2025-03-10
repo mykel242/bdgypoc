@@ -37,11 +37,11 @@ const LedgerRenderer = {
     row.dataset.transactionId = transaction.id;
     row.dataset.sequence = transaction.sequence;
 
-    // Create date cell
+    // Create date cell with normalized date
     const dateCell = document.createElement("td");
     const dateInput = document.createElement("input");
     dateInput.type = "date";
-    dateInput.value = transaction.date;
+    dateInput.value = normalizeDate(transaction.date);
     dateCell.appendChild(dateInput);
     row.appendChild(dateCell);
 
