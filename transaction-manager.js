@@ -32,8 +32,9 @@ const TransactionManager = {
   },
 
   getStartingBalanceDate() {
+    // Fixed version - no reference to normalizeDate
     const stored = localStorage.getItem("startingBalanceDate");
-    return normalizeDate(stored);
+    return stored || new Date().toISOString().split("T")[0]; // Default to today's date
   },
 
   saveStartingBalanceDate(date) {
