@@ -8,7 +8,25 @@
         <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
     </head>
     <body>
-        <h1>Expense Tracker Test</h1>
+        <header class="app-header">
+            <div class="app-title">
+                <h1>Budgie</h1>
+                <span class="ledger-title-separator">/</span>
+                <div class="select-container">
+                    <select
+                        id="ledger-selector"
+                        class="ledger-selector"
+                    ></select>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="new-ledger-btn" class="header-btn">New</button>
+                <button id="delete-ledger-btn" class="header-btn danger">
+                    Delete
+                </button>
+                <button id="print-ledger-btn" class="header-btn">Print</button>
+            </div>
+        </header>
         <table id="ledger">
             <thead>
                 <tr>

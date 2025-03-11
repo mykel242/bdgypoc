@@ -83,8 +83,14 @@
 
 /* Animation for ledger change */
 @keyframes ledger-change {
-    0% { opacity: 0.7; transform: translateY(-5px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+        opacity: 0.7;
+        transform: translateY(-5px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 #ledger tbody {
@@ -93,4 +99,114 @@
 
 .ledger-changing #ledger tbody {
     animation: ledger-change 0.5s ease-out;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #fff;
+    border-bottom: 1px solid #eaeaea;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.app-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-title h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.ledger-title-separator {
+    color: #6c757d;
+    font-size: 22px;
+    font-weight: 300;
+}
+
+.select-container {
+    position: relative;
+}
+
+.ledger-selector {
+    appearance: none;
+    background-color: transparent;
+    border: none;
+    font-size: 18px;
+    font-weight: 500;
+    color: #4a90e2;
+    cursor: pointer;
+    padding: 4px 24px 4px 4px;
+}
+
+.ledger-selector:focus {
+    outline: none;
+    border-bottom: 1px dotted #4a90e2;
+}
+
+.select-container::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid #4a90e2;
+    pointer-events: none;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.header-btn:hover {
+    background-color: #f5f5f5;
+    border-color: #ccc;
+}
+
+.header-btn.danger {
+    color: #e74c3c;
+    border-color: #e74c3c;
+    background-color: #fff;
+}
+
+.header-btn.danger:hover {
+    background-color: #fdeeee;
+}
+
+/* Additional responsive styles */
+@media (max-width: 600px) {
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
 }
