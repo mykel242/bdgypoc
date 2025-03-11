@@ -346,6 +346,11 @@ const LedgerController = {
         row.dataset.transactionId = newTransaction.id;
         row.dataset.sequence = newTransaction.sequence;
 
+        // Add drag handlers to the new row
+        if (window.LedgerSelection) {
+          LedgerSelection.setupRowHandlers(row);
+        }
+
         // Ensure a new empty row exists
         const newRow = LedgerRenderer.ensureNewTransactionRow(this.ledgerBody);
         this.setupRowListeners(newRow);

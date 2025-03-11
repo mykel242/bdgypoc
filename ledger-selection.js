@@ -29,6 +29,17 @@ const LedgerSelection = {
 
     // Add mutation observer to add drag handlers to new rows
     this.observeNewRows();
+
+    // Initialize drag handlers on all existing transaction rows
+    this.setupExistingRows();
+  },
+
+  // Add drag handlers to all existing transaction rows
+  setupExistingRows() {
+    const rows = this.ledgerBody.querySelectorAll("tr[data-transaction-id]");
+    rows.forEach((row) => {
+      this.setupRowHandlers(row);
+    });
   },
 
   initDragAndDrop() {
@@ -247,12 +258,63 @@ const LedgerSelection = {
     // Get all transaction rows (except the one being dragged, the starting balance, and totals)
     const rows = Array.from(
       this.ledgerBody.querySelectorAll(
-        'tr:not(.dragging):not([data-row-type="starting-balance"]):not([data-row-type="totals"]):not(#add-transaction-row)',
+        'tr:not(.dragging):not([data-row-type="starting-balance"]):not([data-row-type="totals"])',
       ),
     );
 
-    // Find the row the cursor is closest to
-    return rows.reduce(
+    // Check for new transaction row (will be used as a drop target for "end of list")
+    const newTransactionRow = this.ledgerBody.querySelector(
+      "#add-transaction-row",
+    );
+    const totalsRow = this.ledgerBody.querySelector(
+      'tr[data-row-type="totals"]',
+    );
+
+    // If no regular transaction rows and cursor is above new transaction row,
+    // return the new transaction row as the target
+    if (rows.length === 1 && rows[0].id === "add-transaction-row") {
+      const box = rows[0].getBoundingClientRect();
+      if (clientY < box.top + box.height / 2) {
+        return rows[0];
+      }
+      return null;
+    }
+
+    // Filter out the "add new transaction" row for the closest calculation
+    const transactionRows = rows.filter(
+      (row) => row.id !== "add-transaction-row",
+    );
+
+    // If we have no actual transaction rows, no valid target
+    if (transactionRows.length === 0) return null;
+
+    // Check if we're below the last transaction row but above the new transaction row
+    // This is for dropping at the end of the list
+    const lastTransactionRow = transactionRows[transactionRows.length - 1];
+    const lastRowBox = lastTransactionRow.getBoundingClientRect();
+
+    if (newTransactionRow) {
+      const newRowBox = newTransactionRow.getBoundingClientRect();
+
+      // If we're below the last transaction row and above the new transaction row,
+      // return the new transaction row as the target
+      if (
+        clientY > lastRowBox.bottom &&
+        clientY < newRowBox.top + newRowBox.height / 2
+      ) {
+        return newTransactionRow;
+      }
+    } else if (totalsRow) {
+      // If there's no new transaction row, check against totals row
+      const totalsRowBox = totalsRow.getBoundingClientRect();
+      if (clientY > lastRowBox.bottom && clientY < totalsRowBox.top) {
+        // Return the totals row as a marker for "insert at end"
+        return totalsRow;
+      }
+    }
+
+    // Find the closest row the cursor is to (standard case)
+    return transactionRows.reduce(
       (closest, row) => {
         const box = row.getBoundingClientRect();
         const offset = clientY - box.top - box.height / 2;
@@ -284,7 +346,15 @@ const LedgerSelection = {
 
     // Determine if we should show indicator above or below the target row
     let top;
-    if (clientY < middleY) {
+
+    // Special case for "add new transaction" row and totals row
+    if (
+      targetRow.id === "add-transaction-row" ||
+      targetRow.dataset.rowType === "totals"
+    ) {
+      // Always show above these special rows
+      top = rect.top;
+    } else if (clientY < middleY) {
       // Show above
       top = rect.top;
     } else {
@@ -332,10 +402,6 @@ const LedgerSelection = {
       return;
     }
 
-    // Determine if we should insert before or after the target row
-    const rect = targetRow.getBoundingClientRect();
-    const middleY = rect.top + rect.height / 2;
-
     // Collect all transaction IDs in their new order
     const rows = Array.from(
       this.ledgerBody.querySelectorAll("tr[data-transaction-id]"),
@@ -344,16 +410,35 @@ const LedgerSelection = {
     // Remove the dragged row from the array
     const orderedRows = rows.filter((row) => row !== this.draggedRow);
 
-    // Find the index of the target row in the ordered array
-    const targetIndex = orderedRows.indexOf(targetRow);
-
-    // Insert the dragged row at the correct position
-    if (e.clientY < middleY) {
-      // Insert before
-      orderedRows.splice(targetIndex, 0, this.draggedRow);
+    // Special handling for dropping at the end (on "New Transaction" row or totals row)
+    if (
+      targetRow.id === "add-transaction-row" ||
+      targetRow.dataset.rowType === "totals"
+    ) {
+      // Add the dragged row at the end, before the "New Transaction" row or totals row
+      orderedRows.push(this.draggedRow);
     } else {
-      // Insert after
-      orderedRows.splice(targetIndex + 1, 0, this.draggedRow);
+      // Standard case - determine if we should insert before or after the target row
+      const rect = targetRow.getBoundingClientRect();
+      const middleY = rect.top + rect.height / 2;
+
+      // Find the index of the target row in the ordered array
+      const targetIndex = orderedRows.indexOf(targetRow);
+
+      // If target is not found in orderedRows, it might be a special row (add new transaction)
+      if (targetIndex === -1) {
+        // Just add to the end
+        orderedRows.push(this.draggedRow);
+      } else {
+        // Insert at the appropriate position
+        if (e.clientY < middleY) {
+          // Insert before
+          orderedRows.splice(targetIndex, 0, this.draggedRow);
+        } else {
+          // Insert after
+          orderedRows.splice(targetIndex + 1, 0, this.draggedRow);
+        }
+      }
     }
 
     // Get ordered transaction IDs
@@ -516,6 +601,7 @@ const LedgerSelection = {
       setupRowHandlers: this.setupRowHandlers.bind(this),
       observeNewRows: this.observeNewRows.bind(this),
       createDragElements: this.createDragElements.bind(this),
+      setupExistingRows: this.setupExistingRows.bind(this),
     };
   },
 };
