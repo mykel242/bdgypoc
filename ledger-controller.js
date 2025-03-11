@@ -14,7 +14,6 @@ const LedgerController = {
     this.setupEventListeners();
   },
 
-  // Update to the LedgerController's initializeStartingBalance method
   initializeStartingBalance() {
     const startingBalanceRow = document.querySelector(
       'tr[data-row-type="starting-balance"]',
@@ -25,6 +24,11 @@ const LedgerController = {
       startingBalanceRow.querySelector('input[type="date"]');
     const startingBalanceCell =
       startingBalanceRow.querySelector("td:nth-child(5)");
+
+    // Clear previous balance input if it exists
+    while (startingBalanceCell.firstChild) {
+      startingBalanceCell.removeChild(startingBalanceCell.firstChild);
+    }
 
     // Check if we have an active ledger
     const activeLedger = TransactionManager.getActiveLedger();
@@ -62,7 +66,7 @@ const LedgerController = {
     balanceInput.step = "0.01";
     balanceInput.className = "starting-balance-input";
 
-    // Load starting balance
+    // Load starting balance for the current active ledger
     const balance = TransactionManager.getStartingBalance();
     balanceInput.value = balance.toFixed(2);
 

@@ -201,7 +201,12 @@ const LedgerManager = {
         document.getElementById("current-ledger-display").textContent =
           `Current Ledger: ${selectedLedger}`;
 
-        // Refresh the ledger display
+        // Refresh the starting balance first
+        if (window.LedgerController) {
+          LedgerController.initializeStartingBalance();
+        }
+
+        // Then refresh the ledger display
         if (window.LedgerController) {
           LedgerController.renderLedger();
         }
