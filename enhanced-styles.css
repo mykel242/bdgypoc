@@ -345,3 +345,110 @@ input[type="number"].input-error {
     border-left: 2px solid #ffc107 !important;
     background-color: rgba(255, 248, 225, 0.3);
 }
+
+/* Drag and Drop styles */
+
+/* Row being dragged */
+tr.dragging {
+    opacity: 0.4;
+    background-color: #f0f7ff !important;
+}
+
+/* Drop indicator - the line that shows where the row will be placed */
+.drop-indicator {
+    position: fixed;
+    height: 4px;
+    background-color: #4a90e2;
+    z-index: 1000;
+    border-radius: 2px;
+    box-shadow: 0 0 6px rgba(74, 144, 226, 0.5);
+    pointer-events: none; /* Allow events to pass through to elements below */
+    animation: pulse-indicator 1.5s infinite alternate;
+}
+
+@keyframes pulse-indicator {
+    from {
+        box-shadow: 0 0 3px rgba(74, 144, 226, 0.5);
+        height: 3px;
+    }
+    to {
+        box-shadow: 0 0 10px rgba(74, 144, 226, 0.8);
+        height: 5px;
+    }
+}
+
+/* Drag card - the floating card that follows the cursor */
+.drag-card {
+    position: fixed;
+    width: 280px;
+    background-color: rgba(
+        255,
+        255,
+        255,
+        0.85
+    ); /* Semi-transparent white background */
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    pointer-events: none; /* Allow events to pass through to elements below */
+    padding: 12px;
+    transform: translate(-50%, -50%); /* Center on cursor */
+    border: 2px solid #4a90e2;
+    backdrop-filter: blur(3px); /* Add subtle blur effect for modern browsers */
+}
+
+.drag-card-date {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 4px;
+}
+
+.drag-card-description {
+    font-weight: 600;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+.drag-card-amount {
+    font-size: 18px;
+    font-weight: bold;
+    font-family: "Courier New", monospace;
+    text-align: center;
+    padding: 4px 0;
+}
+
+.drag-card-amount.credit {
+    color: #28a745;
+}
+
+.drag-card-amount.debit {
+    color: #dc3545;
+}
+
+/* Enhanced drag handle styles */
+.row-handle {
+    cursor: grab;
+    width: 16px;
+    height: 16px;
+    opacity: 0.4;
+    transition:
+        opacity 0.2s,
+        transform 0.2s;
+}
+
+.row-handle:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+tr:hover .row-handle {
+    opacity: 0.8;
+}
+
+/* Temporarily disable user selection during drag */
+body.dragging {
+    user-select: none;
+}

@@ -87,6 +87,7 @@ const LedgerController = {
     });
   },
 
+  // Update the renderLedger method to set up drag handlers on all rows
   renderLedger() {
     // Check if we have an active ledger
     const activeLedger = TransactionManager.getActiveLedger();
@@ -115,6 +116,11 @@ const LedgerController = {
 
     transactionRows.forEach((row) => {
       this.setupRowListeners(row);
+
+      // Set up drag handlers for transaction rows (not the "add new" row)
+      if (row.dataset.transactionId && window.LedgerSelection) {
+        LedgerSelection.setupRowHandlers(row);
+      }
     });
 
     // Format all credit/debit fields on initial render
