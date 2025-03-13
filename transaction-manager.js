@@ -102,12 +102,10 @@ const TransactionManager = {
     return localStorage.getItem(this.ACTIVE_LEDGER_KEY) || null;
   },
 
-  // Set the active ledger
   setActiveLedger(name) {
     localStorage.setItem(this.ACTIVE_LEDGER_KEY, name);
   },
 
-  // Get transactions for the current active ledger
   getTransactions() {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
@@ -120,7 +118,6 @@ const TransactionManager = {
     return stored ? JSON.parse(stored) : [];
   },
 
-  // Save transactions for the current active ledger
   saveTransactions(transactions) {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
@@ -134,7 +131,6 @@ const TransactionManager = {
     return true;
   },
 
-  // Get starting balance for the current active ledger
   getStartingBalance() {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
@@ -147,7 +143,6 @@ const TransactionManager = {
     return stored ? parseFloat(stored) : 0;
   },
 
-  // Save starting balance for the current active ledger
   saveStartingBalance(balance) {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
@@ -161,7 +156,6 @@ const TransactionManager = {
     return true;
   },
 
-  // Get starting balance date for the current active ledger
   getStartingBalanceDate() {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
@@ -174,7 +168,6 @@ const TransactionManager = {
     return stored || new Date().toISOString().split("T")[0]; // Default to today's date
   },
 
-  // Save starting balance date for the current active ledger
   saveStartingBalanceDate(date) {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
@@ -208,7 +201,6 @@ const TransactionManager = {
     return newTransaction;
   },
 
-  // Add a transaction to the current active ledger
   addTransaction(transaction) {
     const transactions = this.getTransactions();
     const newTransaction = this.createTransaction(transaction);
@@ -217,7 +209,6 @@ const TransactionManager = {
     return newTransaction;
   },
 
-  // Update a transaction in the current active ledger
   updateTransaction(id, updates) {
     const transactions = this.getTransactions();
     const index = transactions.findIndex((t) => t.id === id);
@@ -231,7 +222,6 @@ const TransactionManager = {
     return null;
   },
 
-  // Delete a transaction from the current active ledger
   deleteTransaction(id) {
     const transactions = this.getTransactions();
     const filtered = transactions.filter((t) => t.id !== id);
@@ -244,7 +234,6 @@ const TransactionManager = {
     return false;
   },
 
-  // Reorder transactions in the current active ledger
   reorderTransactions(orderedIds) {
     const transactions = this.getTransactions();
 
@@ -268,47 +257,11 @@ const TransactionManager = {
     return ordered;
   },
 
-  // Get transactions sorted by sequence for the current active ledger
   getSortedTransactions() {
     const transactions = this.getTransactions();
     return [...transactions].sort((a, b) => a.sequence - b.sequence);
   },
 
-  // For testing purposes - adds test data to current active ledger
-  addTestData() {
-    const testData = [
-      {
-        id: this.generateUUID(),
-        sequence: 0,
-        date: "2025-03-01",
-        description: "Test Income",
-        credit: 1000,
-        debit: 0,
-        isPaid: true,
-        isCleared: true,
-      },
-      {
-        id: this.generateUUID(),
-        sequence: 1,
-        date: "2025-03-05",
-        description: "Test Expense",
-        credit: 0,
-        debit: 350,
-        isPaid: true,
-        isCleared: false,
-      },
-    ];
-
-    // Add test data only if there's an active ledger
-    if (this.getActiveLedger()) {
-      this.saveTransactions(testData);
-      return testData;
-    }
-
-    return [];
-  },
-
-  // Clear all data for the current active ledger
   clearActiveLedgerData() {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
@@ -322,7 +275,6 @@ const TransactionManager = {
     return true;
   },
 
-  // Clear all data for all ledgers
   clearAllData() {
     const ledgers = this.getLedgers();
 
@@ -340,46 +292,197 @@ const TransactionManager = {
     return true;
   },
 
-  // Migrate data from the old storage format to the new ledger format
-  migrateOldData(ledgerName = "Default Ledger") {
-    // Check if the old data exists
-    const oldTransactions = localStorage.getItem(
-      "expense_tracker_transactions",
-    );
-    const oldStartingBalance = localStorage.getItem("startingBalance");
-    const oldStartingBalanceDate = localStorage.getItem("startingBalanceDate");
+  // Export ledger data as base64-encoded JSON
+  exportLedgerData(ledgerName) {
+    // If no ledger name provided, use active ledger
+    const targetLedger = ledgerName || this.getActiveLedger();
 
-    if (!oldTransactions && !oldStartingBalance && !oldStartingBalanceDate) {
-      return false; // No old data to migrate
+    if (!targetLedger) {
+      return { success: false, message: "No ledger selected" };
     }
 
-    // Create the new ledger
-    this.createLedger(ledgerName);
-    this.setActiveLedger(ledgerName);
+    try {
+      // Gather all data for this ledger
+      const transactions =
+        JSON.parse(
+          localStorage.getItem(this.getTransactionStorageKey(targetLedger)),
+        ) || [];
 
-    // Migrate transactions
-    if (oldTransactions) {
-      const transactions = JSON.parse(oldTransactions);
-      this.saveTransactions(transactions);
+      const startingBalance =
+        parseFloat(
+          localStorage.getItem(this.getStartingBalanceKey(targetLedger)),
+        ) || 0;
+
+      const startingBalanceDate =
+        localStorage.getItem(this.getStartingBalanceDateKey(targetLedger)) ||
+        new Date().toISOString().split("T")[0];
+
+      // Create a data object with all ledger information
+      const ledgerData = {
+        name: targetLedger,
+        startingBalance: startingBalance,
+        startingBalanceDate: startingBalanceDate,
+        transactions: transactions,
+        exportDate: new Date().toISOString(),
+        version: "1.0",
+      };
+
+      // Convert to JSON and then to base64
+      const jsonString = JSON.stringify(ledgerData);
+      const base64Data = btoa(unescape(encodeURIComponent(jsonString)));
+
+      return {
+        success: true,
+        data: base64Data,
+        ledgerName: targetLedger,
+      };
+    } catch (error) {
+      console.error("Error exporting ledger data:", error);
+      return {
+        success: false,
+        message: "Error exporting ledger data: " + error.message,
+      };
+    }
+  },
+
+  // Import ledger data from base64-encoded string
+  importLedgerData(base64Data) {
+    try {
+      // Decode base64 to JSON
+      const jsonString = decodeURIComponent(escape(atob(base64Data)));
+      const ledgerData = JSON.parse(jsonString);
+
+      // Validate the data structure
+      if (
+        !ledgerData.name ||
+        !ledgerData.version ||
+        !Array.isArray(ledgerData.transactions)
+      ) {
+        return {
+          success: false,
+          message: "Invalid ledger data format",
+        };
+      }
+
+      // Check if a ledger with this name already exists
+      const ledgers = this.getLedgers();
+      let ledgerName = ledgerData.name;
+
+      // If ledger exists, ask for a different name or allow merging
+      if (ledgers.includes(ledgerName)) {
+        // Add a suffix to make the name unique
+        let counter = 1;
+        const baseName = ledgerName;
+        while (ledgers.includes(ledgerName)) {
+          ledgerName = `${baseName} (Import ${counter})`;
+          counter++;
+        }
+      }
+
+      // Create the new ledger
+      this.createLedger(ledgerName);
+
+      // Set starting balance and date
+      this.setActiveLedger(ledgerName);
+      this.saveStartingBalance(parseFloat(ledgerData.startingBalance) || 0);
+      this.saveStartingBalanceDate(
+        ledgerData.startingBalanceDate ||
+          new Date().toISOString().split("T")[0],
+      );
+
+      // Import all transactions
+      this.saveTransactions(ledgerData.transactions);
+
+      return {
+        success: true,
+        message: `Ledger "${ledgerName}" imported successfully`,
+        ledgerName: ledgerName,
+      };
+    } catch (error) {
+      console.error("Error importing ledger data:", error);
+      return {
+        success: false,
+        message: "Error importing ledger data: " + error.message,
+      };
+    }
+  },
+
+  // Add to transaction-manager.js
+  renameLedger(oldName, newName) {
+    // Get all ledgers
+    const ledgers = this.getLedgers();
+
+    // Check if old name exists
+    if (!ledgers.includes(oldName)) {
+      return {
+        success: false,
+        message: `Ledger "${oldName}" does not exist`,
+      };
     }
 
-    // Migrate starting balance
-    if (oldStartingBalance) {
-      const balance = parseFloat(oldStartingBalance);
-      this.saveStartingBalance(balance);
+    // Check if new name already exists
+    if (ledgers.includes(newName)) {
+      return {
+        success: false,
+        message: `A ledger named "${newName}" already exists`,
+      };
     }
 
-    // Migrate starting balance date
-    if (oldStartingBalanceDate) {
-      this.saveStartingBalanceDate(oldStartingBalanceDate);
+    // Get all data for the old ledger
+    const transactionKey = this.getTransactionStorageKey(oldName);
+    const startingBalanceKey = this.getStartingBalanceKey(oldName);
+    const startingBalanceDateKey = this.getStartingBalanceDateKey(oldName);
+
+    const transactions = localStorage.getItem(transactionKey);
+    const startingBalance = localStorage.getItem(startingBalanceKey);
+    const startingBalanceDate = localStorage.getItem(startingBalanceDateKey);
+
+    // Create new ledger with the same data
+    this.createLedger(newName);
+
+    // Save the old data to the new ledger
+    if (transactions) {
+      localStorage.setItem(
+        this.getTransactionStorageKey(newName),
+        transactions,
+      );
     }
 
-    // Optionally, clear old data after migration
-    localStorage.removeItem("expense_tracker_transactions");
-    localStorage.removeItem("startingBalance");
-    localStorage.removeItem("startingBalanceDate");
+    if (startingBalance) {
+      localStorage.setItem(
+        this.getStartingBalanceKey(newName),
+        startingBalance,
+      );
+    }
 
-    return true;
+    if (startingBalanceDate) {
+      localStorage.setItem(
+        this.getStartingBalanceDateKey(newName),
+        startingBalanceDate,
+      );
+    }
+
+    // Remove the old ledger from the list
+    const updatedLedgers = ledgers.filter((name) => name !== oldName);
+    updatedLedgers.push(newName);
+    this.saveLedgers(updatedLedgers);
+
+    // Check if the old ledger was active, and if so, set the new one as active
+    const activeLedger = this.getActiveLedger();
+    if (activeLedger === oldName) {
+      this.setActiveLedger(newName);
+    }
+
+    // Remove old ledger data
+    localStorage.removeItem(transactionKey);
+    localStorage.removeItem(startingBalanceKey);
+    localStorage.removeItem(startingBalanceDateKey);
+
+    return {
+      success: true,
+      message: `Ledger renamed from "${oldName}" to "${newName}"`,
+      newName: newName,
+    };
   },
 
   exports: function () {
@@ -411,11 +514,14 @@ const TransactionManager = {
       reorderTransactions: this.reorderTransactions.bind(this),
       getSortedTransactions: this.getSortedTransactions.bind(this),
 
+      // Import/Export
+      exportLedgerData: this.exportLedgerData.bind(this),
+      importLedgerData: this.importLedgerData.bind(this),
+      renameLedger: this.renameLedger.bind(this),
+
       // Utilities
-      addTestData: this.addTestData.bind(this),
       clearActiveLedgerData: this.clearActiveLedgerData.bind(this),
       clearAllData: this.clearAllData.bind(this),
-      migrateOldData: this.migrateOldData.bind(this),
     };
   },
 };

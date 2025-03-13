@@ -178,6 +178,139 @@ const LedgerManager = {
         }
       });
 
+    // Handle export ledger button click
+    document
+      .getElementById("export-ledger-btn")
+      .addEventListener("click", () => {
+        const activeLedger = TransactionManager.getActiveLedger();
+        if (!activeLedger) {
+          alert("Please select a ledger to export.");
+          return;
+        }
+
+        // Get the export data
+        const result = TransactionManager.exportLedgerData();
+
+        if (!result.success) {
+          alert(result.message);
+          return;
+        }
+
+        // Create a downloadable file
+        const blob = new Blob([result.data], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+
+        // Create a download link and trigger it
+        const downloadLink = document.createElement("a");
+        downloadLink.href = url;
+        downloadLink.download = `${result.ledgerName.replace(/\s+/g, "_")}_export.txt`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        // Clean up
+        URL.revokeObjectURL(url);
+      });
+
+    // Handle import ledger button click
+    document
+      .getElementById("import-ledger-btn")
+      .addEventListener("click", () => {
+        // Create file input element
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = ".txt";
+
+        // Handle file selection
+        fileInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+
+          reader.onload = (event) => {
+            try {
+              const base64Data = event.target.result;
+
+              // Import the data
+              const result = TransactionManager.importLedgerData(base64Data);
+
+              if (result.success) {
+                // Update the UI
+                this.updateLedgerSelector();
+
+                // Set the newly imported ledger as active
+                if (result.ledgerName) {
+                  TransactionManager.setActiveLedger(result.ledgerName);
+
+                  // Refresh the ledger display
+                  if (window.LedgerController) {
+                    LedgerController.initializeStartingBalance();
+                    LedgerController.renderLedger();
+                  }
+                }
+
+                alert(result.message);
+              } else {
+                alert(result.message);
+              }
+            } catch (error) {
+              console.error("Error importing file:", error);
+              alert("Error importing file: " + error.message);
+            }
+          };
+
+          reader.readAsText(file);
+        });
+        // Trigger file selection dialog
+        fileInput.click();
+      });
+
+    // Add to setupEventListeners function in ledger-management.js
+    // Handle rename ledger button click
+    document
+      .getElementById("rename-ledger-btn")
+      .addEventListener("click", () => {
+        const activeLedger = TransactionManager.getActiveLedger();
+
+        if (!activeLedger) {
+          alert("Please select a ledger to rename.");
+          return;
+        }
+
+        // Prompt for new name
+        const newName = prompt(
+          "Enter a new name for the ledger:",
+          activeLedger,
+        );
+
+        // If user cancels or enters empty name, do nothing
+        if (!newName || newName.trim() === "") {
+          return;
+        }
+
+        // Handle case where the name is unchanged
+        if (newName === activeLedger) {
+          alert("The ledger name is unchanged.");
+          return;
+        }
+
+        // Rename the ledger
+        const result = TransactionManager.renameLedger(activeLedger, newName);
+
+        if (result.success) {
+          // Update the UI
+          this.updateLedgerSelector();
+
+          // Alert the user of success
+          alert(result.message);
+        } else {
+          // Alert the user of failure
+          alert(result.message);
+        }
+      });
+
+    // Handle print ledger button click
     document
       .getElementById("print-ledger-btn")
       .addEventListener("click", () => {
