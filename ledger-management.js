@@ -194,20 +194,136 @@ const LedgerManager = {
           return;
         }
 
-        // Get the table data
-        const table = document.getElementById("ledger");
-        const tableClone = table.cloneNode(true);
+        // Create a clean version of the table data
+        const printTable = document.createElement("table");
+        printTable.className = "print-table";
+
+        // Clone the header
+        const thead = document.querySelector("#ledger thead").cloneNode(true);
+        printTable.appendChild(thead);
+
+        // Create new tbody
+        const tbody = document.createElement("tbody");
+
+        // Add starting balance row
+        const startingBalanceRow = document.querySelector(
+          'tr[data-row-type="starting-balance"]',
+        );
+        const sbDate =
+          startingBalanceRow.querySelector('input[type="date"]').value;
+        const sbBalance = startingBalanceRow
+          .querySelector("td:nth-child(5)")
+          .textContent.trim();
+
+        const sbPrintRow = document.createElement("tr");
+        sbPrintRow.className = "starting-balance-row";
+        sbPrintRow.innerHTML = `
+        <td>${formatDate(sbDate)}</td>
+        <td>Starting Balance</td>
+        <td></td>
+        <td></td>
+        <td>${sbBalance}</td>
+        <td></td>
+        <td></td>
+      `;
+        tbody.appendChild(sbPrintRow);
+
+        // Add transaction rows
+        const transactionRows = document.querySelectorAll(
+          "tr[data-transaction-id]",
+        );
+        transactionRows.forEach((row) => {
+          const date = row.querySelector("td:nth-child(1) input").value;
+          const desc = row.querySelector("td:nth-child(2) input").value;
+          let credit = row.querySelector("td:nth-child(3) input").value;
+          let debit = row.querySelector("td:nth-child(4) input").value;
+          const balance = row
+            .querySelector("td:nth-child(5)")
+            .textContent.trim();
+          const isPaid = row.querySelector("td:nth-child(6) input").checked;
+          const isCleared = row.querySelector("td:nth-child(7) input").checked;
+
+          // Format credit and debit
+          credit = credit ? parseFloat(credit).toFixed(2) : "";
+          debit = debit ? `(${parseFloat(debit).toFixed(2)})` : "";
+
+          const printRow = document.createElement("tr");
+          printRow.innerHTML = `
+          <td>${formatDate(date)}</td>
+          <td>${desc}</td>
+          <td>${credit}</td>
+          <td>${debit}</td>
+          <td>${balance}</td>
+          <td>${isPaid ? "✓" : ""}</td>
+          <td>${isCleared ? "✓" : ""}</td>
+        `;
+          tbody.appendChild(printRow);
+        });
+
+        // Add totals row
+        const totalsRow = document.querySelector('tr[data-row-type="totals"]');
+        const totalCredit = totalsRow
+          .querySelector("td:nth-child(3)")
+          .textContent.trim();
+        const totalDebit = totalsRow
+          .querySelector("td:nth-child(4)")
+          .textContent.trim();
+        const finalBalance = totalsRow
+          .querySelector("td:nth-child(5)")
+          .textContent.trim();
+
+        const totalsPrintRow = document.createElement("tr");
+        totalsPrintRow.className = "totals-row";
+        totalsPrintRow.innerHTML = `
+        <td><strong>Totals</strong></td>
+        <td></td>
+        <td>${totalCredit}</td>
+        <td>${totalDebit}</td>
+        <td>${finalBalance}</td>
+        <td></td>
+        <td></td>
+      `;
+        tbody.appendChild(totalsPrintRow);
+
+        printTable.appendChild(tbody);
+
+        // Helper function to format date
+        function formatDate(dateStr) {
+          if (!dateStr) return "";
+          try {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString();
+          } catch (e) {
+            return dateStr;
+          }
+        }
 
         // Basic print styles
         const printStyles = `
-          body { font-family: Arial, sans-serif; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f4f4f4; }
-          h1 { text-align: center; color: #333; }
-          .print-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-          .print-date { color: #666; }
-        `;
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        h1 { text-align: center; color: #333; margin-bottom: 5px; }
+        .print-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .print-date { color: #666; }
+
+        /* Alignment styles */
+        td:nth-child(3), td:nth-child(4), td:nth-child(5),
+        th:nth-child(3), th:nth-child(4), th:nth-child(5) {
+          text-align: right;
+          font-family: "Courier New", monospace;
+        }
+
+        /* Style the starting balance and totals rows */
+        .starting-balance-row { background-color: #f5f5f5; }
+        .totals-row { background-color: #f0f0f0; font-weight: bold; border-top: 2px solid #ddd; }
+
+        /* Center the checkmarks */
+        td:nth-child(6), td:nth-child(7) {
+          text-align: center;
+        }
+      `;
 
         // Get formatted date
         const today = new Date();
@@ -215,29 +331,27 @@ const LedgerManager = {
 
         // Create print HTML
         printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Budgie - ${activeLedger}</title>
-              <style>${printStyles}</style>
-            </head>
-            <body>
-              <div class="print-header">
-                <h1>Budgie - ${activeLedger}</h1>
-                <div class="print-date">Printed on: ${formattedDate}</div>
-              </div>
-              <div>${tableClone.outerHTML}</div>
-            </body>
-          </html>
-        `);
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Budgie - ${activeLedger}</title>
+            <style>${printStyles}</style>
+          </head>
+          <body>
+            <div class="print-header">
+              <h1>Budgie - ${activeLedger}</h1>
+              <div class="print-date">Printed on: ${formattedDate}</div>
+            </div>
+            <div>${printTable.outerHTML}</div>
+          </body>
+        </html>
+      `);
 
         printWindow.document.close();
 
         // Wait for resources to load then print
         setTimeout(() => {
           printWindow.print();
-          // Optional: close the window after printing
-          // printWindow.close();
         }, 500);
       });
   },
