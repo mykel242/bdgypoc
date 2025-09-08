@@ -44,10 +44,10 @@ const LedgerManager = {
   },
 
   updateLedgerSelector() {
-    const selector = document.getElementById("ledger-selector");
-
-    // Clear existing options
-    selector.innerHTML = "";
+    // Dropdown selector has been removed - this method is now a no-op
+    // Kept for backward compatibility with existing code
+    console.log('LedgerManager: updateLedgerSelector called (no-op - dropdown removed)');
+    return;
 
     // Get all ledgers and active ledger
     const ledgers = TransactionManager.getLedgers();
