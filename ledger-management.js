@@ -93,25 +93,7 @@ const LedgerManager = {
   },
 
   setupEventListeners() {
-    // Handle ledger selection change
-    const selector = document.getElementById("ledger-selector");
-    selector.addEventListener("change", (e) => {
-      const selectedLedger = e.target.value;
-
-      if (selectedLedger) {
-        TransactionManager.setActiveLedger(selectedLedger);
-
-        // Refresh the starting balance first
-        if (window.LedgerController) {
-          LedgerController.initializeStartingBalance();
-        }
-
-        // Then refresh the ledger display
-        if (window.LedgerController) {
-          LedgerController.renderLedger();
-        }
-      }
-    });
+    // Dropdown selector removed - using welcome screen and hamburger menu now
 
     // Handle new ledger button click
     document.getElementById("new-ledger-btn").addEventListener("click", () => {

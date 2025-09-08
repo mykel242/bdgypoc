@@ -135,40 +135,21 @@
     position: relative;
 }
 
-.ledger-selector {
-    appearance: none;
-    background-color: transparent;
-    border: none;
+.current-ledger-name {
     font-size: 18px;
     font-weight: 500;
     color: #4a90e2;
-    cursor: pointer;
-    padding: 4px 24px 4px 4px;
 }
 
-.ledger-selector:focus {
-    outline: none;
-    border-bottom: 1px dotted #4a90e2;
-}
-
-.select-container::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 4px;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid #4a90e2;
-    pointer-events: none;
+.current-ledger-name.hidden {
+    display: none;
 }
 
 .header-actions {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .header-btn {

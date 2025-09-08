@@ -196,7 +196,7 @@ const AppStateManager = {
         
         // Hide ledger-specific header elements
         document.getElementById('ledger-title-separator')?.classList.add('hidden');
-        document.getElementById('ledger-name-container')?.classList.add('hidden');
+        document.getElementById('current-ledger-name')?.classList.add('hidden');
         document.getElementById('close-ledger-btn')?.classList.add('hidden');
         
         // Update session
@@ -210,11 +210,24 @@ const AppStateManager = {
      * Open a ledger
      */
     openLedger(ledgerName) {
-        console.log('Opening ledger:', ledgerName);
+        console.log('AppStateManager: Opening ledger:', ledgerName);
+        
+        // Validate ledger exists
+        if (!ledgerName) {
+            console.error('AppStateManager: No ledger name provided');
+            return;
+        }
+        
+        const ledgers = window.TransactionManager?.getLedgers() || [];
+        if (!ledgers.includes(ledgerName)) {
+            console.error('AppStateManager: Ledger does not exist:', ledgerName);
+            return;
+        }
         
         // Set active ledger in TransactionManager
         if (window.TransactionManager) {
             window.TransactionManager.setActiveLedger(ledgerName);
+            console.log('AppStateManager: Set active ledger in TransactionManager');
         }
         
         this.currentState = 'document';
@@ -223,18 +236,39 @@ const AppStateManager = {
         // Update body class
         document.body.classList.remove('welcome-state');
         document.body.classList.add('document-state');
+        console.log('AppStateManager: Updated body classes to document-state');
         
         // Show/hide elements
         const welcomeScreen = document.getElementById('welcome-screen');
         const ledgerView = document.getElementById('ledger-view');
         
-        if (welcomeScreen) welcomeScreen.classList.add('hidden');
-        if (ledgerView) ledgerView.classList.remove('hidden');
+        if (welcomeScreen) {
+            welcomeScreen.classList.add('hidden');
+            console.log('AppStateManager: Hid welcome screen');
+        }
+        if (ledgerView) {
+            ledgerView.classList.remove('hidden');
+            console.log('AppStateManager: Showed ledger view');
+        }
         
         // Show ledger-specific header elements
-        document.getElementById('ledger-title-separator')?.classList.remove('hidden');
-        document.getElementById('ledger-name-container')?.classList.remove('hidden');
-        document.getElementById('close-ledger-btn')?.classList.remove('hidden');
+        const separator = document.getElementById('ledger-title-separator');
+        const ledgerNameSpan = document.getElementById('current-ledger-name');
+        const closeBtn = document.getElementById('close-ledger-btn');
+        
+        if (separator) {
+            separator.classList.remove('hidden');
+            console.log('AppStateManager: Showed ledger separator');
+        }
+        if (ledgerNameSpan) {
+            ledgerNameSpan.textContent = ledgerName;
+            ledgerNameSpan.classList.remove('hidden');
+            console.log('AppStateManager: Showed ledger name:', ledgerName);
+        }
+        if (closeBtn) {
+            closeBtn.classList.remove('hidden');
+            console.log('AppStateManager: Showed close button');
+        }
         
         // Update metadata
         this.updateLedgerMetadata(ledgerName, { lastOpened: new Date().toISOString() });
@@ -242,15 +276,19 @@ const AppStateManager = {
         // Update session
         this.saveSession();
         
-        // Load ledger data
-        if (window.LedgerController) {
+        // Load ledger data and update UI
+        if (window.LedgerController && window.LedgerController.loadLedger) {
             window.LedgerController.loadLedger();
+            console.log('AppStateManager: Loaded ledger data');
         }
         
-        // Update selector
-        if (window.LedgerManager) {
-            window.LedgerManager.updateLedgerSelector();
-        }
+        // Force metadata refresh after opening ledger
+        setTimeout(() => {
+            this.updateCurrentLedgerMetadata();
+            console.log('AppStateManager: Updated metadata after ledger load');
+        }, 100);
+        
+        console.log('AppStateManager: Ledger opening complete');
     },
 
     /**
@@ -264,12 +302,13 @@ const AppStateManager = {
         // Update metadata before closing
         if (this.currentLedger) {
             this.updateCurrentLedgerMetadata();
+            console.log('AppStateManager: Updated metadata before closing');
         }
         
         // Clear current ledger
         this.currentLedger = null;
         
-        // Show welcome screen
+        // Show welcome screen (which will refresh the recent ledgers)
         this.showWelcomeScreen();
     },
 
@@ -377,8 +416,13 @@ const AppStateManager = {
         // Add click handlers
         listContainer.querySelectorAll('.recent-ledger-item').forEach(item => {
             item.addEventListener('click', () => {
-                const ledgerName = item.dataset.ledger;
-                this.openLedger(ledgerName);
+                const ledgerName = item.getAttribute('data-ledger');
+                console.log('Recent ledger clicked:', ledgerName);
+                if (ledgerName) {
+                    this.openLedger(ledgerName);
+                } else {
+                    console.error('No ledger name found for clicked item');
+                }
             });
         });
     },

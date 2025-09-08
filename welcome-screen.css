@@ -231,7 +231,7 @@ body.document-state .ledger-view {
 
 /* Header adjustments for states */
 body.welcome-state #ledger-title-separator,
-body.welcome-state #ledger-name-container,
+body.welcome-state #current-ledger-name,
 body.welcome-state #close-ledger-btn,
 body.welcome-state #save-network-btn,
 body.welcome-state #export-ledger-btn,
@@ -243,7 +243,7 @@ body.welcome-state #close-ledger-menu-btn {
 }
 
 body.document-state #ledger-title-separator,
-body.document-state #ledger-name-container,
+body.document-state #current-ledger-name,
 body.document-state #close-ledger-btn {
     display: initial;
 }
