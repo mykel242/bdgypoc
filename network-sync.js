@@ -181,38 +181,63 @@ const NetworkSync = {
      */
     async loadNetworkData(contents, filename) {
         try {
-            const syncData = JSON.parse(contents);
+            let syncData;
+            
+            // Try to parse the file
+            try {
+                syncData = JSON.parse(contents);
+            } catch (parseErr) {
+                console.error('Failed to parse JSON:', parseErr);
+                throw new Error('Invalid JSON format. Please select a valid .budgie file.');
+            }
+            
+            // Check if this is a base64 encoded file (old export format)
+            if (typeof syncData === 'string' && syncData.includes('base64,')) {
+                throw new Error('This appears to be an old export format. Please use Import instead of Open from Network.');
+            }
             
             // Check version compatibility
-            if (syncData.version !== this.CONFIG.SYNC_VERSION) {
+            if (syncData.version && syncData.version !== this.CONFIG.SYNC_VERSION) {
                 if (!confirm('This file was created with a different version. Continue anyway?')) {
-                    return;
+                    return false;
                 }
             }
 
             // Check for lock
             if (syncData.lockId && this.isLockActive(syncData.lastModified)) {
                 if (!confirm('This file may be open on another computer. Open anyway?')) {
-                    return;
+                    return false;
                 }
             }
 
-            // Load the data
-            const ledgerData = syncData.data || syncData; // Handle both wrapped and unwrapped data
+            // Load the data - handle both wrapped and unwrapped formats
+            const ledgerData = syncData.data || syncData;
+            
+            // Validate the ledger data structure
+            if (!ledgerData.transactions && !ledgerData.name && !ledgerData.startingBalance) {
+                throw new Error('Invalid ledger data structure. This file may not be a Budgie ledger.');
+            }
             
             // Import into TransactionManager
             if (window.TransactionManager && window.TransactionManager.importLedger) {
                 const ledgerName = this.extractLedgerName(filename);
-                window.TransactionManager.importLedger(ledgerName, ledgerData);
+                const result = window.TransactionManager.importLedger(ledgerName, ledgerData);
                 
-                // Switch to the imported ledger
-                if (window.LedgerManager) {
-                    window.LedgerManager.setActiveLedger(ledgerName);
+                if (result.success) {
+                    // Switch to the imported ledger
+                    if (window.LedgerManager) {
+                        window.LedgerManager.setActiveLedger(ledgerName);
+                    }
+                    return true;
+                } else {
+                    throw new Error(result.message || 'Failed to import ledger');
                 }
             }
+            
+            return true;
         } catch (err) {
-            console.error('Failed to parse network file:', err);
-            this.showNotification('Invalid file format', 'error');
+            console.error('Failed to load network file:', err);
+            throw err; // Re-throw to be handled by caller
         }
     },
 
@@ -282,12 +307,17 @@ const NetworkSync = {
             if (file) {
                 try {
                     const contents = await file.text();
-                    await this.loadNetworkData(contents, file.name);
-                    // Only show one success notification
-                    this.showNotification('Ledger loaded from file', 'success');
+                    const result = await this.loadNetworkData(contents, file.name);
+                    
+                    // Only show success if the load was successful
+                    if (result !== false) {
+                        this.showNotification('Ledger loaded from file', 'success');
+                    }
                 } catch (err) {
                     console.error('Error loading file:', err);
-                    this.showNotification('Failed to load file', 'error');
+                    // Show specific error message
+                    const errorMessage = err.message || 'Failed to load file';
+                    this.showNotification(errorMessage, 'error');
                 }
             }
         };
