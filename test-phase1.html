@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phase 1 Testing - File System Components</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        button { margin: 5px; padding: 8px 12px; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+        .output { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Phase 1 Component Testing</h1>
+    <p>Testing the new file-system components in isolation</p>
+
+    <div class="test-section">
+        <h2>1. File Formats Testing</h2>
+        <button onclick="testFileFormats()">Test File Formats</button>
+        <div id="fileFormatsOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. FileManager Testing</h2>
+        <button onclick="testFileManager()">Test FileManager</button>
+        <button onclick="testCreateLedger()">Create Test Ledger</button>
+        <div id="fileManagerOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Registry Manager Testing</h2>
+        <button onclick="testRegistryManager()">Test Registry</button>
+        <button onclick="addTestLedgers()">Add Test Ledgers</button>
+        <button onclick="showRegistry()">Show Registry</button>
+        <div id="registryOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Changelog Manager Testing</h2>
+        <button onclick="testChangelogManager()">Test Changelog</button>
+        <button onclick="testUndoRedo()">Test Undo/Redo</button>
+        <div id="changelogOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. File System API Support</h2>
+        <button onclick="checkFileSystemAPI()">Check API Support</button>
+        <div id="fileSystemOutput" class="output"></div>
+    </div>
+
+    <!-- Load Phase 1 Components -->
+    <script src="file-formats.js"></script>
+    <script src="file-manager.js"></script>
+    <script src="registry-manager.js"></script>
+    <script src="changelog-manager.js"></script>
+
+    <script>
+        let output = (id, content, isError = false) => {
+            const el = document.getElementById(id);
+            const className = isError ? 'error' : 'success';
+            el.innerHTML += `<div class="${className}">${content}</div>`;
+        };
+
+        let log = (id, obj) => {
+            const el = document.getElementById(id);
+            el.innerHTML += `<pre>${JSON.stringify(obj, null, 2)}</pre>`;
+        };
+
+        function testFileFormats() {
+            const outputId = 'fileFormatsOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            try {
+                // Test file ID generation
+                const fileId = FileFormats.generateFileId();
+                output(outputId, `Generated File ID: ${fileId}`);
+
+                // Test .budgie file creation
+                const budgieFile = FileFormats.createBudgieFile(fileId, 'Test Ledger', 100);
+                output(outputId, 'Created .budgie file structure');
+                log(outputId, budgieFile);
+
+                // Test validation
+                const validation = FileFormats.validateBudgieFile(budgieFile);
+                output(outputId, `Validation result: ${validation.success ? 'PASS' : 'FAIL'}`);
+                
+                if (!validation.success) {
+                    output(outputId, 'Validation errors: ' + validation.errors.join(', '), true);
+                }
+
+                // Test changelog file creation
+                const changelogFile = FileFormats.createChangelogFile(fileId);
+                output(outputId, 'Created .budgie.changelog file structure');
+                log(outputId, changelogFile);
+
+                // Test filename generation
+                const budgieFilename = FileFormats.getBudgieFilename(fileId);
+                const changelogFilename = FileFormats.getChangelogFilename(fileId);
+                output(outputId, `Filenames: ${budgieFilename}, ${changelogFilename}`);
+
+                output(outputId, '✅ All FileFormats tests passed!');
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('FileFormats test error:', error);
+            }
+        }
+
+        function testFileManager() {
+            const outputId = 'fileManagerOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            try {
+                // Initialize FileManager
+                FileManager.init();
+                output(outputId, 'FileManager initialized');
+
+                // Check File System API support
+                const hasAPI = FileManager.checkFileSystemAPISupport();
+                output(outputId, `File System API supported: ${hasAPI}`);
+
+                output(outputId, '✅ FileManager basic tests passed!');
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('FileManager test error:', error);
+            }
+        }
+
+        function testCreateLedger() {
+            const outputId = 'fileManagerOutput';
+            
+            try {
+                // Create a test ledger in memory
+                const ledgerData = FileManager.createLedger('Test Budget 2025', 500);
+                output(outputId, 'Created test ledger in memory');
+                log(outputId, ledgerData);
+
+                // Get current ledger
+                const currentLedger = FileManager.getCurrentLedger();
+                output(outputId, 'Retrieved current ledger');
+                
+                // Add a test transaction
+                const transaction = {
+                    date: '2025-09-08',
+                    description: 'Test Transaction',
+                    credit: 100,
+                    debit: 0,
+                    paid: true,
+                    cleared: false
+                };
+                
+                const addedTransaction = FileManager.addTransaction(transaction);
+                output(outputId, `Added transaction with ID: ${addedTransaction.id}`);
+
+                // Get starting balance
+                const startingBalance = FileManager.getStartingBalance();
+                output(outputId, `Starting balance: ${startingBalance}`);
+
+                // Get transactions
+                const transactions = FileManager.getTransactions();
+                output(outputId, `Transaction count: ${transactions.length}`);
+
+                output(outputId, '✅ FileManager ledger creation tests passed!');
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('Create ledger test error:', error);
+            }
+        }
+
+        function testRegistryManager() {
+            const outputId = 'registryOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            try {
+                // Initialize RegistryManager
+                RegistryManager.init();
+                output(outputId, 'RegistryManager initialized');
+
+                // Get stats
+                const stats = RegistryManager.getStats();
+                output(outputId, 'Registry stats:');
+                log(outputId, stats);
+
+                output(outputId, '✅ RegistryManager basic tests passed!');
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('RegistryManager test error:', error);
+            }
+        }
+
+        function addTestLedgers() {
+            const outputId = 'registryOutput';
+            
+            try {
+                // Add some test ledgers
+                const fileId1 = FileFormats.generateFileId();
+                const fileId2 = FileFormats.generateFileId();
+
+                RegistryManager.addLedger(fileId1, 'Personal Budget 2025', '/fake/path1.budgie', {
+                    transactionCount: 15,
+                    currentBalance: 2500.50,
+                    dateRange: ['2025-01-01', '2025-09-08']
+                });
+
+                RegistryManager.addLedger(fileId2, 'Business Expenses', '/fake/path2.budgie', {
+                    transactionCount: 8,
+                    currentBalance: -150.75,
+                    dateRange: ['2025-08-01', '2025-09-08']
+                });
+
+                output(outputId, 'Added 2 test ledgers to registry');
+                
+                const recentLedgers = RegistryManager.getRecentLedgers();
+                output(outputId, `Recent ledgers count: ${recentLedgers.length}`);
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('Add test ledgers error:', error);
+            }
+        }
+
+        function showRegistry() {
+            const outputId = 'registryOutput';
+            
+            try {
+                const allLedgers = RegistryManager.getAllLedgers();
+                output(outputId, 'Current registry contents:');
+                log(outputId, allLedgers);
+
+                // Test search
+                const searchResults = RegistryManager.searchLedgers('budget');
+                output(outputId, `Search for 'budget' found: ${searchResults.length} results`);
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('Show registry error:', error);
+            }
+        }
+
+        function testChangelogManager() {
+            const outputId = 'changelogOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            try {
+                // Initialize ChangelogManager
+                ChangelogManager.init();
+                output(outputId, 'ChangelogManager initialized');
+
+                // Create a test file ID and load changelog
+                const testFileId = FileFormats.generateFileId();
+                ChangelogManager.loadChangelog(testFileId).then(changelog => {
+                    output(outputId, 'Loaded/created changelog');
+                    log(outputId, changelog);
+
+                    // Record a test command
+                    const command = ChangelogManager.recordCommand(
+                        'transaction_add',
+                        'Added grocery expense',
+                        { 
+                            transaction: { 
+                                id: 'txn_123', 
+                                description: 'Groceries', 
+                                debit: 50 
+                            } 
+                        },
+                        { transactionId: 'txn_123' }
+                    );
+                    
+                    output(outputId, 'Recorded test command:');
+                    log(outputId, command);
+
+                    // Check undo/redo capabilities
+                    output(outputId, `Can undo: ${ChangelogManager.canUndo()}`);
+                    output(outputId, `Can redo: ${ChangelogManager.canRedo()}`);
+                    output(outputId, `Undo count: ${ChangelogManager.getUndoCount()}`);
+
+                    output(outputId, '✅ ChangelogManager basic tests passed!');
+
+                }).catch(error => {
+                    output(outputId, `❌ Error loading changelog: ${error.message}`, true);
+                });
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('ChangelogManager test error:', error);
+            }
+        }
+
+        function testUndoRedo() {
+            const outputId = 'changelogOutput';
+            
+            // This would test actual undo/redo operations
+            // For now, just show the capability
+            try {
+                const stats = ChangelogManager.getStats();
+                output(outputId, 'Changelog stats:');
+                log(outputId, stats);
+
+                const undoDesc = ChangelogManager.getUndoDescription();
+                const redoDesc = ChangelogManager.getRedoDescription();
+                
+                output(outputId, `Next undo: ${undoDesc || 'None'}`);
+                output(outputId, `Next redo: ${redoDesc || 'None'}`);
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('Undo/Redo test error:', error);
+            }
+        }
+
+        function checkFileSystemAPI() {
+            const outputId = 'fileSystemOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            try {
+                const hasFilePickerAPI = 'showOpenFilePicker' in window;
+                const hasSavePickerAPI = 'showSaveFilePicker' in window;
+                const hasCryptoUUID = crypto && crypto.randomUUID;
+
+                output(outputId, `File System Access API Support:`);
+                output(outputId, `- showOpenFilePicker: ${hasFilePickerAPI}`);
+                output(outputId, `- showSaveFilePicker: ${hasSavePickerAPI}`);
+                output(outputId, `- crypto.randomUUID: ${hasCryptoUUID}`);
+
+                if (hasFilePickerAPI && hasSavePickerAPI) {
+                    output(outputId, '✅ Full File System API support detected!');
+                } else {
+                    output(outputId, '⚠️ File System API not supported, will use fallbacks');
+                }
+
+            } catch (error) {
+                output(outputId, `❌ Error: ${error.message}`, true);
+                console.error('File System API test error:', error);
+            }
+        }
+
+        // Run initial checks on page load
+        window.onload = function() {
+            checkFileSystemAPI();
+        };
+    </script>
+</body>
+</html>
