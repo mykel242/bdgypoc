@@ -7,7 +7,7 @@
 }
 
 .welcome-screen {
-    min-height: calc(100vh - 80px);
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -219,6 +219,11 @@ body.welcome-state .ledger-view {
 
 body.welcome-state .welcome-screen {
     display: flex;
+    min-height: 100vh;
+}
+
+body.welcome-state .app-header {
+    display: none;
 }
 
 body.document-state .welcome-screen {
@@ -227,6 +232,10 @@ body.document-state .welcome-screen {
 
 body.document-state .ledger-view {
     display: block;
+}
+
+body.document-state .app-header {
+    display: flex;
 }
 
 /* Header adjustments for states */

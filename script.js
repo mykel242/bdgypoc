@@ -35,6 +35,7 @@ function initHamburgerMenu() {
 
   // Toggle menu on hamburger click
   hamburgerBtn.addEventListener('click', (e) => {
+    console.log('Hamburger menu clicked');
     e.stopPropagation();
     const isOpen = !dropdownMenu.classList.contains('hidden');
     
