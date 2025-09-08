@@ -5,14 +5,15 @@
         <link rel="stylesheet" href="styles.css" />
         <link rel="stylesheet" href="enhanced-styles.css" />
         <link rel="stylesheet" href="ledger-management-styles.css" />
+        <link rel="stylesheet" href="welcome-screen.css" />
         <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
     </head>
     <body>
         <header class="app-header">
             <div class="app-title">
                 <h1>Budgie</h1>
-                <span class="ledger-title-separator">/</span>
-                <div class="select-container">
+                <span id="ledger-title-separator" class="ledger-title-separator hidden">/</span>
+                <div id="ledger-name-container" class="select-container hidden">
                     <select
                         id="ledger-selector"
                         class="ledger-selector"
@@ -20,6 +21,9 @@
                 </div>
             </div>
             <div class="header-actions">
+                <button id="close-ledger-btn" class="close-ledger-btn hidden" aria-label="Close Ledger">
+                    ✕
+                </button>
                 <button id="hamburger-menu-btn" class="hamburger-btn" aria-label="Menu">
                     <span class="hamburger-line"></span>
                     <span class="hamburger-line"></span>
@@ -29,6 +33,7 @@
                     <button id="new-ledger-btn" class="menu-item">New</button>
                     <button id="open-network-btn" class="menu-item">Open from Network</button>
                     <button id="save-network-btn" class="menu-item">Save to Network</button>
+                    <button id="close-ledger-menu-btn" class="menu-item">Close Ledger</button>
                     <div class="menu-divider"></div>
                     <button id="import-ledger-btn" class="menu-item">Import</button>
                     <button id="export-ledger-btn" class="menu-item">Export</button>
@@ -40,7 +45,45 @@
                 </div>
             </div>
         </header>
-        <table id="ledger">
+        
+        <!-- Welcome Screen (shown when no ledger is active) -->
+        <div id="welcome-screen" class="welcome-screen hidden">
+            <div class="welcome-container">
+                <div class="welcome-header">
+                    <h2>Welcome to Budgie</h2>
+                    <p>Your Personal Finance Manager</p>
+                </div>
+                
+                <div class="recent-ledgers-section">
+                    <h3>Recent Ledgers</h3>
+                    <div id="recent-ledgers-list" class="recent-ledgers-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                    <div id="no-ledgers-message" class="no-ledgers-message hidden">
+                        <p>No ledgers yet. Create your first ledger to get started!</p>
+                    </div>
+                </div>
+                
+                <div class="welcome-actions">
+                    <button id="welcome-new-btn" class="welcome-btn primary">
+                        <span class="btn-icon">➕</span> New Ledger
+                    </button>
+                    <button id="welcome-open-network-btn" class="welcome-btn">
+                        <span class="btn-icon">📂</span> Open from Network
+                    </button>
+                    <button id="welcome-import-btn" class="welcome-btn">
+                        <span class="btn-icon">📥</span> Import
+                    </button>
+                    <button id="welcome-browse-all-btn" class="welcome-btn">
+                        <span class="btn-icon">🔍</span> Browse All
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ledger View (shown when a ledger is active) -->
+        <div id="ledger-view" class="ledger-view">
+            <table id="ledger">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -73,6 +116,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
 
         <script src="transaction-manager.js"></script>
         <script src="ledger-renderer.js"></script>
@@ -80,6 +124,7 @@
         <script src="ledger-selection.js"></script>
         <script src="ledger-management.js"></script>
         <script src="network-sync.js"></script>
+        <script src="app-state-manager.js"></script>
         <script src="script.js"></script>
     </body>
 </html>

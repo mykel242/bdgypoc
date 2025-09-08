@@ -1,0 +1,259 @@
+/* Welcome Screen Styles */
+
+.welcome-screen {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.welcome-screen.hidden {
+    display: none;
+}
+
+.welcome-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 40px;
+    max-width: 800px;
+    width: 100%;
+}
+
+.welcome-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.welcome-header h2 {
+    font-size: 32px;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.welcome-header p {
+    color: #6c757d;
+    font-size: 16px;
+}
+
+/* Recent Ledgers Section */
+.recent-ledgers-section {
+    margin-bottom: 40px;
+}
+
+.recent-ledgers-section h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+.recent-ledgers-list {
+    display: grid;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.recent-ledger-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.recent-ledger-item:hover {
+    background: #e9ecef;
+    border-color: #4a90e2;
+    transform: translateX(4px);
+}
+
+.recent-ledger-info {
+    flex: 1;
+}
+
+.recent-ledger-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    font-size: 16px;
+}
+
+.recent-ledger-meta {
+    display: flex;
+    gap: 16px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.recent-ledger-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.recent-ledger-balance {
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.recent-ledger-balance.positive {
+    color: #27ae60;
+}
+
+.recent-ledger-balance.negative {
+    color: #e74c3c;
+}
+
+.no-ledgers-message {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.no-ledgers-message.hidden {
+    display: none;
+}
+
+/* Welcome Actions */
+.welcome-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.welcome-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.welcome-btn:hover {
+    background: #f8f9fa;
+    border-color: #4a90e2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-btn.primary {
+    background: #4a90e2;
+    color: white;
+    border-color: #4a90e2;
+}
+
+.welcome-btn.primary:hover {
+    background: #357abd;
+    border-color: #357abd;
+}
+
+.btn-icon {
+    font-size: 20px;
+}
+
+/* Close Ledger Button */
+.close-ledger-btn {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    color: #6c757d;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 8px;
+}
+
+.close-ledger-btn:hover {
+    background: #f8f9fa;
+    border-color: #ccc;
+    color: #333;
+}
+
+.close-ledger-btn.hidden {
+    display: none;
+}
+
+/* Ledger View */
+.ledger-view {
+    padding: 20px;
+}
+
+.ledger-view.hidden {
+    display: none;
+}
+
+/* App States */
+body.welcome-state .ledger-view {
+    display: none;
+}
+
+body.welcome-state .welcome-screen {
+    display: flex;
+}
+
+body.document-state .welcome-screen {
+    display: none;
+}
+
+body.document-state .ledger-view {
+    display: block;
+}
+
+/* Header adjustments for states */
+body.welcome-state #ledger-title-separator,
+body.welcome-state #ledger-name-container,
+body.welcome-state #close-ledger-btn,
+body.welcome-state #save-network-btn,
+body.welcome-state #export-ledger-btn,
+body.welcome-state #rename-ledger-btn,
+body.welcome-state #print-ledger-btn,
+body.welcome-state #delete-ledger-btn,
+body.welcome-state #close-ledger-menu-btn {
+    display: none !important;
+}
+
+body.document-state #ledger-title-separator,
+body.document-state #ledger-name-container,
+body.document-state #close-ledger-btn {
+    display: initial;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .welcome-container {
+        padding: 20px;
+    }
+    
+    .welcome-header h2 {
+        font-size: 24px;
+    }
+    
+    .welcome-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .recent-ledger-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .recent-ledger-balance {
+        margin-top: 8px;
+    }
+}

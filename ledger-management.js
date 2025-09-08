@@ -133,20 +133,25 @@ const LedgerManager = {
         // Create the new ledger
         TransactionManager.createLedger(name);
 
-        // Set it as active
-        TransactionManager.setActiveLedger(name);
+        // Open the new ledger using AppStateManager if available
+        if (window.AppStateManager) {
+          AppStateManager.openLedger(name);
+        } else {
+          // Fallback to old behavior
+          TransactionManager.setActiveLedger(name);
+          
+          // Update the UI
+          this.updateLedgerSelector();
 
-        // Update the UI
-        this.updateLedgerSelector();
+          // Initialize the starting balance field
+          if (window.LedgerController) {
+            LedgerController.initializeStartingBalance();
+          }
 
-        // Initialize the starting balance field
-        if (window.LedgerController) {
-          LedgerController.initializeStartingBalance();
-        }
-
-        // Refresh the ledger display
-        if (window.LedgerController) {
-          LedgerController.renderLedger();
+          // Refresh the ledger display
+          if (window.LedgerController) {
+            LedgerController.renderLedger();
+          }
         }
       }
     });

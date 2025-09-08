@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
     NetworkSync.init();
   }
 
+  // Initialize app state manager (handles welcome screen and document model)
+  if (window.AppStateManager) {
+    AppStateManager.init();
+  }
+
   // Initialize hamburger menu
   initHamburgerMenu();
 
