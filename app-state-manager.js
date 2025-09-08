@@ -363,8 +363,8 @@ const AppStateManager = {
                     <div class="recent-ledger-info">
                         <div class="recent-ledger-name">${ledger.name}</div>
                         <div class="recent-ledger-meta">
-                            <span>📅 ${lastModified}</span>
-                            <span>📝 ${ledger.transactionCount} transactions</span>
+                            <span>${lastModified}</span>
+                            <span>${ledger.transactionCount} transactions</span>
                         </div>
                     </div>
                     <div class="recent-ledger-balance ${balanceClass}">

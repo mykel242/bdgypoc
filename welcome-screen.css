@@ -1,5 +1,11 @@
 /* Welcome Screen Styles */
 
+/* Ensure proper font rendering for all characters */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
 .welcome-screen {
     min-height: calc(100vh - 80px);
     display: flex;
