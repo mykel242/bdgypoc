@@ -224,10 +224,19 @@ const NetworkSync = {
                 const result = window.TransactionManager.importLedger(ledgerName, ledgerData);
                 
                 if (result.success) {
-                    // Switch to the imported ledger
-                    if (window.LedgerManager) {
-                        window.LedgerManager.setActiveLedger(ledgerName);
+                    // Switch to the imported ledger using TransactionManager
+                    window.TransactionManager.setActiveLedger(ledgerName);
+                    
+                    // Update the UI selector
+                    if (window.LedgerManager && window.LedgerManager.updateLedgerSelector) {
+                        window.LedgerManager.updateLedgerSelector();
                     }
+                    
+                    // Trigger a page reload to refresh the ledger display
+                    if (window.LedgerController && window.LedgerController.loadLedger) {
+                        window.LedgerController.loadLedger();
+                    }
+                    
                     return true;
                 } else {
                     throw new Error(result.message || 'Failed to import ledger');
