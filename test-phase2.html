@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phase 2 Testing - AppStateManager Integration</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        button { margin: 5px; padding: 8px 12px; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+        .output { max-height: 300px; overflow-y: auto; }
+        .status-display { 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            background: #f9f9f9; 
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Phase 2 Integration Testing</h1>
+    <p>Testing the refactored AppStateManager with file-system architecture</p>
+
+    <div class="status-display">
+        <strong>Current State:</strong> <span id="current-state">unknown</span><br>
+        <strong>Components Loaded:</strong> <span id="components-status">checking...</span>
+    </div>
+
+    <div class="test-section">
+        <h2>1. Component Initialization</h2>
+        <button onclick="testComponentInit()">Test Component Loading</button>
+        <div id="initOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. State Management</h2>
+        <button onclick="testStateTransitions()">Test State Transitions</button>
+        <button onclick="showWelcome()">Show Welcome</button>
+        <button onclick="showDocument()">Show Mock Document</button>
+        <div id="stateOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Registry Integration</h2>
+        <button onclick="testRegistryIntegration()">Test Registry</button>
+        <button onclick="addMockLedger()">Add Mock Ledger</button>
+        <button onclick="updateRecentLedgers()">Update Recent Ledgers</button>
+        <div id="registryOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Keyboard Shortcuts</h2>
+        <p>Test keyboard shortcuts (when in document view):</p>
+        <ul>
+            <li><kbd>Ctrl/Cmd + W</kbd> - Close ledger</li>
+            <li><kbd>Ctrl/Cmd + S</kbd> - Save ledger</li>
+            <li><kbd>Ctrl/Cmd + Z</kbd> - Undo</li>
+            <li><kbd>Ctrl/Cmd + Y</kbd> - Redo</li>
+        </ul>
+        <div id="keyboardOutput" class="output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Error Handling</h2>
+        <button onclick="testErrorHandling()">Test Error Scenarios</button>
+        <div id="errorOutput" class="output"></div>
+    </div>
+
+    <!-- Load all components in order -->
+    <script src="file-formats.js"></script>
+    <script src="file-manager.js"></script>
+    <script src="registry-manager.js"></script>
+    <script src="changelog-manager.js"></script>
+    <script src="transaction-manager.js"></script>
+    <script src="ledger-renderer.js"></script>
+    <script src="ledger-controller.js"></script>
+    <script src="ledger-selection.js"></script>
+    <script src="ledger-management.js"></script>
+    <script src="network-sync.js"></script>
+    <script src="app-state-manager.js"></script>
+
+    <script>
+        let output = (id, content, type = 'success') => {
+            const el = document.getElementById(id);
+            const className = type;
+            el.innerHTML += `<div class="${className}">[${new Date().toLocaleTimeString()}] ${content}</div>`;
+        };
+
+        let log = (id, obj) => {
+            const el = document.getElementById(id);
+            el.innerHTML += `<pre>${JSON.stringify(obj, null, 2)}</pre>`;
+        };
+
+        function updateStatus() {
+            // Check component availability
+            const components = [
+                'FileFormats',
+                'FileManager', 
+                'RegistryManager',
+                'ChangelogManager',
+                'AppStateManager'
+            ];
+            
+            const loaded = components.filter(name => window[name]).join(', ');
+            const missing = components.filter(name => !window[name]).join(', ');
+            
+            document.getElementById('components-status').innerHTML = 
+                `✅ Loaded: ${loaded}<br>❌ Missing: ${missing || 'None'}`;
+            
+            // Show current state if AppStateManager is available
+            if (window.AppStateManager) {
+                document.getElementById('current-state').textContent = 
+                    AppStateManager.currentState || 'unknown';
+            }
+        }
+
+        function testComponentInit() {
+            const outputId = 'initOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            try {
+                // Test Phase 1 components
+                if (window.FileFormats) {
+                    output(outputId, '✅ FileFormats available');
+                    const testId = FileFormats.generateFileId();
+                    output(outputId, `Generated test ID: ${testId}`);
+                } else {
+                    output(outputId, '❌ FileFormats not available', 'error');
+                }
+                
+                if (window.FileManager) {
+                    output(outputId, '✅ FileManager available');
+                    FileManager.init();
+                    output(outputId, 'FileManager initialized');
+                } else {
+                    output(outputId, '❌ FileManager not available', 'error');
+                }
+                
+                if (window.RegistryManager) {
+                    output(outputId, '✅ RegistryManager available');
+                    RegistryManager.init();
+                    output(outputId, 'RegistryManager initialized');
+                } else {
+                    output(outputId, '❌ RegistryManager not available', 'error');
+                }
+                
+                if (window.ChangelogManager) {
+                    output(outputId, '✅ ChangelogManager available');
+                    ChangelogManager.init();
+                    output(outputId, 'ChangelogManager initialized');
+                } else {
+                    output(outputId, '❌ ChangelogManager not available', 'error');
+                }
+                
+                // Test AppStateManager initialization
+                if (window.AppStateManager) {
+                    output(outputId, '✅ AppStateManager available');
+                    AppStateManager.init();
+                    output(outputId, 'AppStateManager initialized');
+                    updateStatus();
+                } else {
+                    output(outputId, '❌ AppStateManager not available', 'error');
+                }
+                
+            } catch (error) {
+                output(outputId, `❌ Initialization error: ${error.message}`, 'error');
+                console.error('Init test error:', error);
+            }
+        }
+
+        function testStateTransitions() {
+            const outputId = 'stateOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            if (!window.AppStateManager) {
+                output(outputId, '❌ AppStateManager not available', 'error');
+                return;
+            }
+            
+            try {
+                output(outputId, `Current state: ${AppStateManager.currentState}`);
+                
+                // Test state properties
+                const isLedgerOpen = AppStateManager.isLedgerOpen();
+                output(outputId, `Is ledger open: ${isLedgerOpen}`);
+                
+                const currentData = AppStateManager.getCurrentLedgerData();
+                output(outputId, `Current ledger data: ${currentData ? 'Present' : 'None'}`);
+                
+                output(outputId, '✅ State transition tests passed');
+                
+            } catch (error) {
+                output(outputId, `❌ State test error: ${error.message}`, 'error');
+            }
+        }
+
+        function showWelcome() {
+            if (window.AppStateManager) {
+                AppStateManager.showWelcomeScreen();
+                updateStatus();
+                output('stateOutput', 'Switched to welcome screen');
+            }
+        }
+
+        function showDocument() {
+            if (window.AppStateManager && window.FileFormats) {
+                // Create mock ledger data
+                const mockData = {
+                    fileId: FileFormats.generateFileId(),
+                    metadata: {
+                        title: 'Test Ledger ' + new Date().toLocaleTimeString()
+                    }
+                };
+                
+                AppStateManager.showDocumentView(mockData);
+                updateStatus();
+                output('stateOutput', 'Switched to document view with mock data');
+            }
+        }
+
+        function testRegistryIntegration() {
+            const outputId = 'registryOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            if (!window.RegistryManager) {
+                output(outputId, '❌ RegistryManager not available', 'error');
+                return;
+            }
+            
+            try {
+                const stats = RegistryManager.getStats();
+                output(outputId, 'Registry stats:');
+                log(outputId, stats);
+                
+                const recentLedgers = RegistryManager.getRecentLedgers(5);
+                output(outputId, `Recent ledgers count: ${recentLedgers.length}`);
+                
+                if (recentLedgers.length > 0) {
+                    log(outputId, recentLedgers);
+                }
+                
+            } catch (error) {
+                output(outputId, `❌ Registry test error: ${error.message}`, 'error');
+            }
+        }
+
+        function addMockLedger() {
+            const outputId = 'registryOutput';
+            
+            if (!window.RegistryManager || !window.FileFormats) {
+                output(outputId, '❌ Required components not available', 'error');
+                return;
+            }
+            
+            try {
+                const fileId = FileFormats.generateFileId();
+                const title = `Test Ledger ${Date.now()}`;
+                
+                RegistryManager.addLedger(fileId, title, '/mock/path.budgie', {
+                    transactionCount: Math.floor(Math.random() * 20),
+                    currentBalance: (Math.random() - 0.5) * 1000,
+                    dateRange: ['2025-09-01', '2025-09-08']
+                });
+                
+                output(outputId, `Added mock ledger: ${title}`);
+                
+            } catch (error) {
+                output(outputId, `❌ Add ledger error: ${error.message}`, 'error');
+            }
+        }
+
+        function updateRecentLedgers() {
+            if (window.AppStateManager) {
+                AppStateManager.updateRecentLedgers();
+                output('registryOutput', 'Updated recent ledgers display');
+            }
+        }
+
+        function testErrorHandling() {
+            const outputId = 'errorOutput';
+            document.getElementById(outputId).innerHTML = '';
+            
+            try {
+                // Test various error scenarios
+                
+                // 1. Test FileManager without current ledger
+                if (window.FileManager) {
+                    try {
+                        FileManager.addTransaction({ invalid: 'data' });
+                        output(outputId, '⚠️ Expected error not thrown', 'warning');
+                    } catch (error) {
+                        output(outputId, `✅ Caught expected FileManager error: ${error.message}`);
+                    }
+                }
+                
+                // 2. Test ChangelogManager without loaded changelog
+                if (window.ChangelogManager) {
+                    try {
+                        ChangelogManager.recordCommand('invalid_type', 'test', {});
+                        output(outputId, '⚠️ Expected error not thrown', 'warning');
+                    } catch (error) {
+                        output(outputId, `✅ Caught expected ChangelogManager error: ${error.message}`);
+                    }
+                }
+                
+                // 3. Test invalid file format validation
+                if (window.FileFormats) {
+                    const invalidData = { incomplete: 'data' };
+                    const validation = FileFormats.validateBudgieFile(invalidData);
+                    
+                    if (!validation.success) {
+                        output(outputId, '✅ File validation correctly rejected invalid data');
+                        output(outputId, `Errors: ${validation.errors.join(', ')}`);
+                    } else {
+                        output(outputId, '⚠️ File validation should have failed', 'warning');
+                    }
+                }
+                
+                output(outputId, '✅ Error handling tests completed');
+                
+            } catch (error) {
+                output(outputId, `❌ Error test failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Keyboard shortcut logging
+        document.addEventListener('keydown', (e) => {
+            const combo = [];
+            if (e.ctrlKey) combo.push('Ctrl');
+            if (e.metaKey) combo.push('Cmd');
+            combo.push(e.key);
+            
+            if ((e.ctrlKey || e.metaKey) && ['w', 's', 'z', 'y'].includes(e.key)) {
+                output('keyboardOutput', `Keyboard shortcut detected: ${combo.join('+')}`, 'warning');
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                updateStatus();
+                output('initOutput', 'Page loaded, ready for testing');
+            }, 100);
+        });
+    </script>
+</body>
+</html>
