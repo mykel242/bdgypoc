@@ -25,15 +25,17 @@ const AppStateManager = {
         // Setup event listeners
         this.setupEventListeners();
         
-        // Check for auto-open ledger (for backward compatibility)
-        const session = this.getSession();
-        if (session && session.currentLedger) {
-            // Auto-open last ledger for now (can be disabled later)
-            this.openLedger(session.currentLedger);
-        } else {
-            // Show welcome screen
-            this.showWelcomeScreen();
+        // Clear any stale session data that might cause confusion
+        this.clearSession();
+        
+        // Clear any active ledger in TransactionManager
+        if (window.TransactionManager) {
+            window.TransactionManager.setActiveLedger(null);
         }
+        
+        // Always show welcome screen by default
+        // Note: Removed auto-open ledger behavior that was bypassing welcome screen
+        this.showWelcomeScreen();
         
         // Update recent ledgers display
         this.updateRecentLedgers();
@@ -66,9 +68,13 @@ const AppStateManager = {
         
         const ledgers = window.TransactionManager?.getLedgers() || [];
         
+        const currentActiveLedger = window.TransactionManager?.getActiveLedger();
+        
         ledgers.forEach(name => {
-            const transactions = window.TransactionManager?.getTransactions(name) || [];
-            const startingBalance = window.TransactionManager?.getStartingBalance(name) || 0;
+            // Set active ledger to get correct data
+            window.TransactionManager?.setActiveLedger(name);
+            const transactions = window.TransactionManager?.getTransactions() || [];
+            const startingBalance = window.TransactionManager?.getStartingBalance() || 0;
             
             // Calculate totals
             let totalDebits = 0;
@@ -91,6 +97,11 @@ const AppStateManager = {
                 isPinned: false
             });
         });
+        
+        // Restore original active ledger
+        if (currentActiveLedger) {
+            window.TransactionManager?.setActiveLedger(currentActiveLedger);
+        }
         
         this.saveMetadata();
     },
@@ -122,6 +133,15 @@ const AppStateManager = {
     },
 
     /**
+     * Clear session data
+     */
+    clearSession() {
+        localStorage.removeItem(this.SESSION_KEY);
+        this.currentLedger = null;
+        this.currentState = 'welcome';
+    },
+
+    /**
      * Setup event listeners
      */
     setupEventListeners() {
@@ -141,21 +161,21 @@ const AppStateManager = {
         const welcomeNewBtn = document.getElementById('welcome-new-btn');
         if (welcomeNewBtn) {
             welcomeNewBtn.addEventListener('click', () => {
-                document.getElementById('new-ledger-btn').click();
+                this.createNewLedger();
             });
         }
         
         const welcomeOpenBtn = document.getElementById('welcome-open-network-btn');
         if (welcomeOpenBtn) {
             welcomeOpenBtn.addEventListener('click', () => {
-                document.getElementById('open-network-btn').click();
+                this.openFromNetwork();
             });
         }
         
         const welcomeImportBtn = document.getElementById('welcome-import-btn');
         if (welcomeImportBtn) {
             welcomeImportBtn.addEventListener('click', () => {
-                document.getElementById('import-ledger-btn').click();
+                this.importLedger();
             });
         }
         
@@ -276,11 +296,29 @@ const AppStateManager = {
         // Update session
         this.saveSession();
         
-        // Load ledger data and update UI
-        if (window.LedgerController && window.LedgerController.loadLedger) {
-            window.LedgerController.loadLedger();
-            console.log('AppStateManager: Loaded ledger data');
-        }
+        // Load ledger data and update UI after DOM is ready
+        setTimeout(() => {
+            if (window.LedgerController) {
+                // Ensure DOM elements are available
+                const ledgerBody = document.querySelector("#ledger tbody");
+                if (ledgerBody) {
+                    // Force re-initialization of LedgerController for the new ledger
+                    if (window.LedgerController.init) {
+                        window.LedgerController.init();
+                    }
+                    
+                    if (window.LedgerController.initializeStartingBalance) {
+                        window.LedgerController.initializeStartingBalance();
+                    }
+                    if (window.LedgerController.renderLedger) {
+                        window.LedgerController.renderLedger();
+                    }
+                    console.log('AppStateManager: Loaded ledger data');
+                } else {
+                    console.error('AppStateManager: Ledger DOM not ready, skipping render');
+                }
+            }
+        }, 100);
         
         // Force metadata refresh after opening ledger
         setTimeout(() => {
@@ -349,8 +387,17 @@ const AppStateManager = {
     updateCurrentLedgerMetadata() {
         if (!this.currentLedger || !window.TransactionManager) return;
         
-        const transactions = window.TransactionManager.getTransactions(this.currentLedger) || [];
-        const startingBalance = window.TransactionManager.getStartingBalance(this.currentLedger) || 0;
+        // Temporarily set the active ledger to get correct data  
+        const previousActiveLedger = window.TransactionManager.getActiveLedger();
+        window.TransactionManager.setActiveLedger(this.currentLedger);
+        
+        const transactions = window.TransactionManager.getTransactions() || [];
+        const startingBalance = window.TransactionManager.getStartingBalance() || 0;
+        
+        // Restore the previous active ledger
+        if (previousActiveLedger) {
+            window.TransactionManager.setActiveLedger(previousActiveLedger);
+        }
         
         // Calculate totals
         let totalDebits = 0;
@@ -468,6 +515,95 @@ const AppStateManager = {
      */
     getCurrentLedger() {
         return this.currentLedger;
+    },
+
+    /**
+     * Create a new ledger from welcome screen
+     */
+    createNewLedger() {
+        const name = prompt(
+            "Enter a name for the new ledger:",
+            `Ledger ${new Date().toLocaleDateString()}`,
+        );
+
+        if (name) {
+            // Check if ledger name already exists
+            const ledgers = window.TransactionManager?.getLedgers() || [];
+            if (ledgers.includes(name)) {
+                alert(
+                    `A ledger named "${name}" already exists. Please choose a different name.`,
+                );
+                return;
+            }
+
+            // Create the new ledger
+            if (window.TransactionManager) {
+                window.TransactionManager.createLedger(name);
+                this.openLedger(name);
+            }
+        }
+    },
+
+    /**
+     * Open ledger from network
+     */
+    openFromNetwork() {
+        if (window.NetworkSync && window.NetworkSync.openFromNetwork) {
+            window.NetworkSync.openFromNetwork();
+        } else {
+            alert('Network functionality not available');
+        }
+    },
+
+    /**
+     * Import ledger from welcome screen
+     */
+    importLedger() {
+        // Create file input element
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = ".txt";
+
+        // Handle file selection
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                try {
+                    const base64Data = event.target.result;
+
+                    // Import the data
+                    if (window.TransactionManager && window.TransactionManager.importLedgerData) {
+                        const result = window.TransactionManager.importLedgerData(base64Data);
+
+                        if (result.success) {
+                            // Update metadata
+                            this.updateRecentLedgers();
+
+                            // Open the newly imported ledger
+                            if (result.ledgerName) {
+                                this.openLedger(result.ledgerName);
+                            }
+
+                            alert(result.message);
+                        } else {
+                            alert(result.message);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error importing file:", error);
+                    alert("Error importing file: " + error.message);
+                }
+            };
+
+            reader.readAsText(file);
+        });
+        
+        // Trigger file selection dialog
+        fileInput.click();
     }
 };
 

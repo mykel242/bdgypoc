@@ -2,10 +2,14 @@
 <html>
     <head>
         <title>Transaction Manager Test</title>
-        <link rel="stylesheet" href="styles.css" />
-        <link rel="stylesheet" href="enhanced-styles.css" />
-        <link rel="stylesheet" href="ledger-management-styles.css" />
-        <link rel="stylesheet" href="welcome-screen.css" />
+        <script>
+            // Cache-busting with timestamp
+            const timestamp = Date.now();
+            document.write('<link rel="stylesheet" href="styles.css?v=' + timestamp + '" />');
+            document.write('<link rel="stylesheet" href="enhanced-styles.css?v=' + timestamp + '" />');
+            document.write('<link rel="stylesheet" href="ledger-management-styles.css?v=' + timestamp + '" />');
+            document.write('<link rel="stylesheet" href="welcome-screen.css?v=' + timestamp + '" />');
+        </script>
         <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
     </head>
     <body>
@@ -25,17 +29,13 @@
                     <span class="hamburger-line"></span>
                 </button>
                 <div id="dropdown-menu" class="dropdown-menu hidden">
-                    <button id="new-ledger-btn" class="menu-item">New</button>
-                    <button id="open-network-btn" class="menu-item">Open from Network</button>
                     <button id="save-network-btn" class="menu-item">Save to Network</button>
                     <button id="close-ledger-menu-btn" class="menu-item">Close Ledger</button>
                     <div class="menu-divider"></div>
-                    <button id="import-ledger-btn" class="menu-item">Import</button>
                     <button id="export-ledger-btn" class="menu-item">Export</button>
-                    <div class="menu-divider"></div>
-                    <button id="rename-ledger-btn" class="menu-item">Rename</button>
                     <button id="print-ledger-btn" class="menu-item">Print</button>
                     <div class="menu-divider"></div>
+                    <button id="rename-ledger-btn" class="menu-item">Rename</button>
                     <button id="delete-ledger-btn" class="menu-item danger">Delete</button>
                 </div>
             </div>
@@ -77,7 +77,7 @@
         </div>
         
         <!-- Ledger View (shown when a ledger is active) -->
-        <div id="ledger-view" class="ledger-view">
+        <div id="ledger-view" class="ledger-view hidden">
             <table id="ledger">
             <thead>
                 <tr>
@@ -113,13 +113,23 @@
         </table>
         </div>
 
-        <script src="transaction-manager.js"></script>
-        <script src="ledger-renderer.js"></script>
-        <script src="ledger-controller.js"></script>
-        <script src="ledger-selection.js"></script>
-        <script src="ledger-management.js"></script>
-        <script src="network-sync.js"></script>
-        <script src="app-state-manager.js"></script>
-        <script src="script.js"></script>
+        <script>
+            // Cache-busting for JavaScript files
+            const jsTimestamp = Date.now();
+            const jsFiles = [
+                'transaction-manager.js',
+                'ledger-renderer.js', 
+                'ledger-controller.js',
+                'ledger-selection.js',
+                'ledger-management.js',
+                'network-sync.js',
+                'app-state-manager.js',
+                'script.js'
+            ];
+            
+            jsFiles.forEach(file => {
+                document.write('<script src="' + file + '?v=' + jsTimestamp + '"><\/script>');
+            });
+        </script>
     </body>
 </html>

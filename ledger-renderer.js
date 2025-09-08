@@ -3,11 +3,19 @@ const LedgerRenderer = {
   renderLedger(ledgerBody) {
     console.log("Rendering ledger");
 
+    if (!ledgerBody) {
+      console.error('LedgerRenderer: ledgerBody is undefined, cannot render ledger');
+      return;
+    }
+
     this.clearTransactionRows(ledgerBody);
 
     // Get actual transactions from the transaction manager
+    const activeLedger = TransactionManager.getActiveLedger();
+    console.log("Active ledger:", activeLedger);
     const transactions = TransactionManager.getTransactions();
     console.log("Transactions to render:", transactions.length);
+    console.log("Transactions data:", transactions);
 
     // Get reference to totals row
     const totalsRow = ledgerBody.querySelector('tr[data-row-type="totals"]');
@@ -23,6 +31,10 @@ const LedgerRenderer = {
   },
 
   clearTransactionRows(ledgerBody) {
+    if (!ledgerBody) {
+      console.error('LedgerRenderer: ledgerBody is undefined, cannot clear rows');
+      return;
+    }
     const rows = Array.from(
       ledgerBody.querySelectorAll(
         'tr:not([data-row-type="starting-balance"]):not([data-row-type="totals"])',

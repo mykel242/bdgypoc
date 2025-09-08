@@ -43,12 +43,8 @@ const NetworkSync = {
      * Setup event listeners for network sync buttons
      */
     setupEventListeners() {
-        const openNetworkBtn = document.getElementById('open-network-btn');
+        // open-network-btn removed from hamburger menu - now handled by welcome screen
         const saveNetworkBtn = document.getElementById('save-network-btn');
-
-        if (openNetworkBtn) {
-            openNetworkBtn.addEventListener('click', () => this.openFromNetwork());
-        }
 
         if (saveNetworkBtn) {
             saveNetworkBtn.addEventListener('click', () => this.saveToNetwork());
@@ -231,10 +227,7 @@ const NetworkSync = {
                         // Fallback to old behavior
                         window.TransactionManager.setActiveLedger(ledgerName);
                         
-                        // Update the UI selector
-                        if (window.LedgerManager && window.LedgerManager.updateLedgerSelector) {
-                            window.LedgerManager.updateLedgerSelector();
-                        }
+                        // UI updates now handled by AppStateManager
                         
                         // Trigger a page reload to refresh the ledger display
                         if (window.LedgerController && window.LedgerController.loadLedger) {

@@ -1,6 +1,11 @@
 // script.js
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize the ledger manager first (handles ledger selection and creation)
+  // Initialize app state manager first (handles welcome screen and state clearing)
+  if (window.AppStateManager) {
+    AppStateManager.init();
+  }
+
+  // Initialize the ledger manager (handles ledger selection and creation)
   LedgerManager.init();
 
   // Initialize the controller (manages transactions for the active ledger)
@@ -12,11 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize network sync functionality
   if (window.NetworkSync) {
     NetworkSync.init();
-  }
-
-  // Initialize app state manager (handles welcome screen and document model)
-  if (window.AppStateManager) {
-    AppStateManager.init();
   }
 
   // Initialize hamburger menu
@@ -31,11 +31,13 @@ function initHamburgerMenu() {
   const hamburgerBtn = document.getElementById('hamburger-menu-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
 
-  if (!hamburgerBtn || !dropdownMenu) return;
+  if (!hamburgerBtn || !dropdownMenu) {
+    console.error('Hamburger menu elements not found');
+    return;
+  }
 
   // Toggle menu on hamburger click
   hamburgerBtn.addEventListener('click', (e) => {
-    console.log('Hamburger menu clicked');
     e.stopPropagation();
     const isOpen = !dropdownMenu.classList.contains('hidden');
     

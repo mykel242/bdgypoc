@@ -6,8 +6,7 @@ const LedgerManager = {
     // Check if we need to migrate old data
     this.checkAndMigrateOldData();
 
-    // Initialize ledger selector with available ledgers
-    this.updateLedgerSelector();
+    // Ledger selector removed - initialization handled by welcome screen
 
     // Set up event listeners
     this.setupEventListeners();
@@ -47,96 +46,15 @@ const LedgerManager = {
     // Dropdown selector has been removed - this method is now a no-op
     // Kept for backward compatibility with existing code
     console.log('LedgerManager: updateLedgerSelector called (no-op - dropdown removed)');
+    // Fixed: Removed all unreachable code that referenced undefined 'selector' variable
     return;
-
-    // Get all ledgers and active ledger
-    const ledgers = TransactionManager.getLedgers();
-    const activeLedger = TransactionManager.getActiveLedger();
-
-    if (ledgers.length === 0) {
-      // No ledgers available - create a default option
-      const defaultOption = document.createElement("option");
-      defaultOption.disabled = true;
-      defaultOption.selected = true;
-      defaultOption.textContent = "No ledgers";
-      defaultOption.value = "";
-      selector.appendChild(defaultOption);
-
-      // Disable the selector and delete button
-      selector.disabled = true;
-      document.getElementById("delete-ledger-btn").disabled = true;
-      return;
-    }
-
-    // Add options for each ledger
-    ledgers.forEach((ledger) => {
-      const option = document.createElement("option");
-      option.value = ledger;
-      option.textContent = ledger;
-
-      // Select the active ledger
-      if (ledger === activeLedger) {
-        option.selected = true;
-      }
-
-      selector.appendChild(option);
-    });
-
-    // Enable the selector and delete button
-    selector.disabled = false;
-    document.getElementById("delete-ledger-btn").disabled = false;
-
-    // Set active ledger if not already set
-    if (!activeLedger && ledgers.length > 0) {
-      TransactionManager.setActiveLedger(ledgers[0]);
-    }
   },
 
   setupEventListeners() {
     // Dropdown selector removed - using welcome screen and hamburger menu now
 
-    // Handle new ledger button click
-    document.getElementById("new-ledger-btn").addEventListener("click", () => {
-      const name = prompt(
-        "Enter a name for the new ledger:",
-        `Ledger ${new Date().toLocaleDateString()}`,
-      );
-
-      if (name) {
-        // Check if ledger name already exists
-        const ledgers = TransactionManager.getLedgers();
-        if (ledgers.includes(name)) {
-          alert(
-            `A ledger named "${name}" already exists. Please choose a different name.`,
-          );
-          return;
-        }
-
-        // Create the new ledger
-        TransactionManager.createLedger(name);
-
-        // Open the new ledger using AppStateManager if available
-        if (window.AppStateManager) {
-          AppStateManager.openLedger(name);
-        } else {
-          // Fallback to old behavior
-          TransactionManager.setActiveLedger(name);
-          
-          // Update the UI
-          this.updateLedgerSelector();
-
-          // Initialize the starting balance field
-          if (window.LedgerController) {
-            LedgerController.initializeStartingBalance();
-          }
-
-          // Refresh the ledger display
-          if (window.LedgerController) {
-            LedgerController.renderLedger();
-          }
-        }
-      }
-    });
+    // Handle new ledger button click - REMOVED: now handled by welcome screen
+    // New ledger creation is now done from the welcome screen
 
     // Handle delete ledger button click
     document
@@ -151,9 +69,6 @@ const LedgerManager = {
 
           if (confirmDelete) {
             TransactionManager.deleteLedger(activeLedger);
-
-            // Update the UI
-            this.updateLedgerSelector();
 
             // Refresh the ledger display
             if (window.LedgerController) {
@@ -199,59 +114,8 @@ const LedgerManager = {
         URL.revokeObjectURL(url);
       });
 
-    // Handle import ledger button click
-    document
-      .getElementById("import-ledger-btn")
-      .addEventListener("click", () => {
-        // Create file input element
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.accept = ".txt";
-
-        // Handle file selection
-        fileInput.addEventListener("change", (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
-
-          const reader = new FileReader();
-
-          reader.onload = (event) => {
-            try {
-              const base64Data = event.target.result;
-
-              // Import the data
-              const result = TransactionManager.importLedgerData(base64Data);
-
-              if (result.success) {
-                // Update the UI
-                this.updateLedgerSelector();
-
-                // Set the newly imported ledger as active
-                if (result.ledgerName) {
-                  TransactionManager.setActiveLedger(result.ledgerName);
-
-                  // Refresh the ledger display
-                  if (window.LedgerController) {
-                    LedgerController.initializeStartingBalance();
-                    LedgerController.renderLedger();
-                  }
-                }
-
-                alert(result.message);
-              } else {
-                alert(result.message);
-              }
-            } catch (error) {
-              console.error("Error importing file:", error);
-              alert("Error importing file: " + error.message);
-            }
-          };
-
-          reader.readAsText(file);
-        });
-        // Trigger file selection dialog
-        fileInput.click();
-      });
+    // Handle import ledger button click - REMOVED: now handled by welcome screen
+    // Import functionality is now available from the welcome screen
 
     // Add to setupEventListeners function in ledger-management.js
     // Handle rename ledger button click
@@ -286,9 +150,6 @@ const LedgerManager = {
         const result = TransactionManager.renameLedger(activeLedger, newName);
 
         if (result.success) {
-          // Update the UI
-          this.updateLedgerSelector();
-
           // Alert the user of success
           alert(result.message);
         } else {
@@ -479,7 +340,6 @@ const LedgerManager = {
   exports() {
     return {
       init: this.init.bind(this),
-      updateLedgerSelector: this.updateLedgerSelector.bind(this),
     };
   },
 };
