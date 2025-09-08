@@ -176,12 +176,18 @@
 
 /* Close Ledger Button */
 .close-ledger-btn {
-    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     background: transparent;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     color: #6c757d;
-    font-size: 18px;
+    font-size: 20px;
+    line-height: 1;
     cursor: pointer;
     transition: all 0.2s;
     margin-right: 8px;
@@ -190,11 +196,11 @@
 .close-ledger-btn:hover {
     background: #f8f9fa;
     border-color: #ccc;
-    color: #333;
+    color: #e74c3c;
 }
 
 .close-ledger-btn.hidden {
-    display: none;
+    display: none !important;
 }
 
 /* Ledger View */
