@@ -20,20 +20,24 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button id="new-ledger-btn" class="header-btn">New</button>
-                <button id="import-ledger-btn" class="header-btn">
-                    Import
+                <button id="hamburger-menu-btn" class="hamburger-btn" aria-label="Menu">
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
+                    <span class="hamburger-line"></span>
                 </button>
-                <button id="export-ledger-btn" class="header-btn">
-                    Export
-                </button>
-                <button id="rename-ledger-btn" class="header-btn">
-                    Rename
-                </button>
-                <button id="print-ledger-btn" class="header-btn">Print</button>
-                <button id="delete-ledger-btn" class="header-btn danger">
-                    Delete
-                </button>
+                <div id="dropdown-menu" class="dropdown-menu hidden">
+                    <button id="new-ledger-btn" class="menu-item">New</button>
+                    <button id="open-network-btn" class="menu-item">Open from Network</button>
+                    <button id="save-network-btn" class="menu-item">Save to Network</button>
+                    <div class="menu-divider"></div>
+                    <button id="import-ledger-btn" class="menu-item">Import</button>
+                    <button id="export-ledger-btn" class="menu-item">Export</button>
+                    <div class="menu-divider"></div>
+                    <button id="rename-ledger-btn" class="menu-item">Rename</button>
+                    <button id="print-ledger-btn" class="menu-item">Print</button>
+                    <div class="menu-divider"></div>
+                    <button id="delete-ledger-btn" class="menu-item danger">Delete</button>
+                </div>
             </div>
         </header>
         <table id="ledger">
@@ -75,6 +79,7 @@
         <script src="ledger-controller.js"></script>
         <script src="ledger-selection.js"></script>
         <script src="ledger-management.js"></script>
+        <script src="network-sync.js"></script>
         <script src="script.js"></script>
     </body>
 </html>

@@ -345,6 +345,47 @@ const TransactionManager = {
     }
   },
 
+  // Import ledger directly from JSON object (for network sync)
+  importLedger(ledgerName, ledgerData) {
+    try {
+      // Check if a ledger with this name already exists
+      const ledgers = this.getLedgers();
+      
+      // If ledger exists, update it instead of creating a new one
+      if (!ledgers.includes(ledgerName)) {
+        this.createLedger(ledgerName);
+      }
+
+      // Set as active ledger
+      this.setActiveLedger(ledgerName);
+
+      // Set starting balance and date
+      if (ledgerData.startingBalance !== undefined) {
+        this.saveStartingBalance(parseFloat(ledgerData.startingBalance) || 0);
+      }
+      if (ledgerData.startingBalanceDate) {
+        this.saveStartingBalanceDate(ledgerData.startingBalanceDate);
+      }
+
+      // Import all transactions
+      if (ledgerData.transactions && Array.isArray(ledgerData.transactions)) {
+        this.saveTransactions(ledgerData.transactions);
+      }
+
+      return {
+        success: true,
+        message: `Ledger "${ledgerName}" imported successfully`,
+        ledgerName: ledgerName,
+      };
+    } catch (error) {
+      console.error("Error importing ledger:", error);
+      return {
+        success: false,
+        message: "Error importing ledger: " + error.message,
+      };
+    }
+  },
+
   // Import ledger data from base64-encoded string
   importLedgerData(base64Data) {
     try {
@@ -516,6 +557,7 @@ const TransactionManager = {
 
       // Import/Export
       exportLedgerData: this.exportLedgerData.bind(this),
+      importLedger: this.importLedger.bind(this),
       importLedgerData: this.importLedgerData.bind(this),
       renameLedger: this.renameLedger.bind(this),
 
