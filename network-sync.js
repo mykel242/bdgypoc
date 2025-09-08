@@ -99,7 +99,10 @@ const NetworkSync = {
         } catch (err) {
             if (err.name !== 'AbortError') {
                 console.error('Failed to open network file:', err);
-                this.showNotification('Failed to open network file', 'error');
+                // Only show error if it's not a user cancellation
+                if (err.message && !err.message.includes('cancel')) {
+                    this.showNotification('Failed to open network file', 'error');
+                }
             }
         }
     },
@@ -277,9 +280,15 @@ const NetworkSync = {
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (file) {
-                const contents = await file.text();
-                await this.loadNetworkData(contents, file.name);
-                this.showNotification('Ledger loaded', 'success');
+                try {
+                    const contents = await file.text();
+                    await this.loadNetworkData(contents, file.name);
+                    // Only show one success notification
+                    this.showNotification('Ledger loaded from file', 'success');
+                } catch (err) {
+                    console.error('Error loading file:', err);
+                    this.showNotification('Failed to load file', 'error');
+                }
             }
         };
         
@@ -360,10 +369,22 @@ const NetworkSync = {
      * Show notification to user
      */
     showNotification(message, type = 'info') {
+        // Get all existing notifications
+        const existingNotifications = document.querySelectorAll('.network-notification');
+        
+        // Calculate offset based on existing notifications
+        let bottomOffset = 20;
+        existingNotifications.forEach(notif => {
+            if (!notif.classList.contains('fade-out')) {
+                bottomOffset += notif.offsetHeight + 10;
+            }
+        });
+        
         // Create notification element
         const notification = document.createElement('div');
         notification.className = `network-notification ${type}`;
         notification.textContent = message;
+        notification.style.bottom = `${bottomOffset}px`;
         
         // Add to page
         document.body.appendChild(notification);
@@ -371,8 +392,26 @@ const NetworkSync = {
         // Auto-remove after 3 seconds
         setTimeout(() => {
             notification.classList.add('fade-out');
-            setTimeout(() => notification.remove(), 300);
+            setTimeout(() => {
+                notification.remove();
+                // Reposition remaining notifications
+                this.repositionNotifications();
+            }, 300);
         }, 3000);
+    },
+
+    /**
+     * Reposition notifications after one is removed
+     */
+    repositionNotifications() {
+        const notifications = document.querySelectorAll('.network-notification:not(.fade-out)');
+        let bottomOffset = 20;
+        
+        notifications.forEach(notif => {
+            notif.style.transition = 'bottom 0.3s ease-out';
+            notif.style.bottom = `${bottomOffset}px`;
+            bottomOffset += notif.offsetHeight + 10;
+        });
     },
 
     /**
