@@ -17,7 +17,10 @@
       "Bash(openssl rand:*)",
       "Bash(pgrep:*)",
       "Bash(PGPASSWORD=budgie_dev_password psql:*)",
-      "Bash(npm run db:test:*)"
+      "Bash(npm run db:test:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []

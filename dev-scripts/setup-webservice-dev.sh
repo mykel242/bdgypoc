@@ -265,7 +265,7 @@ cat > scripts/dev.sh << 'EOF'
 # Start both backend and frontend in development mode
 echo "Starting Budgie Web Service Development..."
 npx concurrently \
-  "cd backend && npm run dev" \
+  "npx nodemon backend/server.js" \
   "cd frontend && npm run dev" \
   --names "API,WEB" \
   --prefix-colors "blue,green"
@@ -290,7 +290,7 @@ cat > package.json << EOF
   "scripts": {
     "start": "node backend/server.js",
     "dev": "bash scripts/dev.sh",
-    "backend": "cd backend && nodemon server.js",
+    "backend": "nodemon backend/server.js",
     "frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
