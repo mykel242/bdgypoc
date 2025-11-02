@@ -127,22 +127,23 @@ CREATE TABLE transactions (
 ## Technology Stack
 
 ### Backend
-- **Node.js/Express** - Already in place
-- **PostgreSQL** - Database (already optionally installed)
+- **Node.js/Express** - API server (already in place)
+- **PostgreSQL** - Database (already installed)
 - **Sequelize** - ORM for database operations
 - **bcrypt** - Password hashing
-- **express-session** or **jsonwebtoken** - Authentication
+- **express-session** - Session-based authentication
 - **express-validator** - Input validation
 - **helmet** - Security headers (already in place)
 
-### Frontend (Current)
-- **Vanilla JavaScript** - Keep existing UI initially
-- **localStorage migration** - Gradual replacement with API calls
+### Frontend
+- **SvelteKit** - Reactive framework with SSR, routing, and build system
+- **TypeScript** - Type safety for better development
+- **Vite** - Fast build tool (included with SvelteKit)
 
-### Future Frontend Options
-- **Svelte/SvelteKit** - Modern reactive framework
-- **React** - Alternative framework option
-- **Vue.js** - Another framework option
+### Development Tools
+- **Prisma** - Alternative to Sequelize (better DX, type safety)
+- **Tailwind CSS** - Utility-first styling
+- **PostgreSQL migrations** - Database schema versioning
 
 ## Migration Strategy
 
