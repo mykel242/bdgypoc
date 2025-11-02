@@ -38,6 +38,117 @@ check_root() {
     fi
 }
 
+deploy_application() {
+    echo
+    echo "============================================"
+    echo "  Deploying Application"
+    echo "============================================"
+    echo
+
+    # Check if we're in a git repo
+    if [ -d ".git" ]; then
+        REPO_DIR=$(pwd)
+        print_status "Using current directory: $REPO_DIR"
+    else
+        print_error "Please run this script from the git repository directory"
+        exit 1
+    fi
+
+    # Copy application files
+    print_status "Copying application files to $APP_DIR..."
+    cp -r . $APP_DIR/
+    chown -R $APP_USER:$APP_USER $APP_DIR
+
+    # Install dependencies
+    print_status "Installing Node.js dependencies..."
+    cd $APP_DIR
+    sudo -u $APP_USER npm ci --production
+
+    # Configure nginx
+    print_status "Setting up nginx configuration..."
+    cp $APP_DIR/deploy/nginx.conf /etc/nginx/sites-available/budgie
+    ln -sf /etc/nginx/sites-available/budgie /etc/nginx/sites-enabled/
+
+    if nginx -t; then
+        systemctl restart nginx
+        print_status "Nginx configured and restarted"
+    else
+        print_error "Nginx configuration test failed"
+        return 1
+    fi
+
+    # Start application with PM2
+    print_status "Starting application with PM2..."
+    sudo -u $APP_USER bash -c "cd $APP_DIR && pm2 start server.js --name budgie"
+    sudo -u $APP_USER bash -c "pm2 save"
+
+    # Setup PM2 startup
+    print_status "Setting up PM2 auto-start..."
+    STARTUP_CMD=$(sudo -u $APP_USER pm2 startup systemd -u $APP_USER --hp /home/$APP_USER | tail -1)
+    if [[ $STARTUP_CMD == sudo* ]]; then
+        eval $STARTUP_CMD
+        print_status "PM2 auto-start configured"
+    fi
+
+    # Test deployment
+    print_status "Testing deployment..."
+    sleep 3
+
+    if curl -s http://localhost:3000/health | grep -q "healthy"; then
+        print_status "Application is running successfully!"
+        echo
+        echo "✅ Deployment Complete!"
+        echo "   - Application: http://localhost:3000"
+        echo "   - Health check: http://localhost:3000/health"
+        echo "   - PM2 status: pm2 status"
+        echo "   - Logs: pm2 logs budgie"
+    else
+        print_warning "Application may not be running correctly"
+        print_info "Check status with: pm2 status"
+        print_info "Check logs with: pm2 logs budgie"
+    fi
+}
+
+show_manual_steps() {
+    echo
+    echo "============================================"
+    echo "  Setup Complete! Next Steps:"
+    echo "============================================"
+    echo
+    echo "1. Copy your application files to $APP_DIR"
+    echo "   Example: rsync -av /path/to/budgie/ $APP_DIR/"
+    echo
+    echo "2. Install Node.js dependencies:"
+    echo "   cd $APP_DIR && npm install --production"
+    echo
+    echo "3. Copy nginx configuration:"
+    echo "   cp $APP_DIR/deploy/nginx.conf /etc/nginx/sites-available/budgie"
+    echo "   ln -s /etc/nginx/sites-available/budgie /etc/nginx/sites-enabled/"
+    echo "   nginx -t && systemctl restart nginx"
+    echo
+    echo "4. Start the application with PM2:"
+    echo "     cd $APP_DIR"
+    echo "     pm2 start server.js --name budgie"
+    echo "     pm2 save"
+    echo "     pm2 startup  # Follow the instructions it provides"
+    echo
+    echo "   Alternative: Use systemd (optional):"
+    echo "     cp $APP_DIR/deploy/budgie@.service /etc/systemd/system/"
+    echo "     systemctl daemon-reload"
+    echo "     systemctl enable budgie@$APP_USER"
+    echo "     systemctl start budgie@$APP_USER"
+    echo
+    echo "5. (Optional) Setup SSL with Let's Encrypt:"
+    echo "   certbot --nginx -d yourdomain.com"
+    echo
+    echo "6. Check application status:"
+    echo "   systemctl status budgie  # if using systemd"
+    echo "   pm2 status              # if using PM2"
+    echo "   curl http://localhost:3000/health"
+    echo
+    print_status "Server preparation complete!"
+}
+
 # Main setup process
 main() {
     echo "============================================"
@@ -144,44 +255,15 @@ EOF
         rm /etc/nginx/sites-enabled/default
     fi
 
-    # Instructions for manual steps
+    # Optional: Full deployment
     echo
-    echo "============================================"
-    echo "  Setup Complete! Next Steps:"
-    echo "============================================"
+    read -p "Deploy the application now? (y/N): " -n 1 -r
     echo
-    echo "1. Copy your application files to $APP_DIR"
-    echo "   Example: rsync -av /path/to/budgie/ $APP_DIR/"
-    echo
-    echo "2. Install Node.js dependencies:"
-    echo "   cd $APP_DIR && npm install --production"
-    echo
-    echo "3. Copy nginx configuration:"
-    echo "   cp $APP_DIR/deploy/nginx.conf /etc/nginx/sites-available/budgie"
-    echo "   ln -s /etc/nginx/sites-available/budgie /etc/nginx/sites-enabled/"
-    echo "   nginx -t && systemctl restart nginx"
-    echo
-    echo "4. Start the application with PM2:"
-    echo "     cd $APP_DIR"
-    echo "     pm2 start server.js --name budgie"
-    echo "     pm2 save"
-    echo "     pm2 startup  # Follow the instructions it provides"
-    echo
-    echo "   Alternative: Use systemd (optional):"
-    echo "     cp $APP_DIR/deploy/budgie@.service /etc/systemd/system/"
-    echo "     systemctl daemon-reload"
-    echo "     systemctl enable budgie@$APP_USER"
-    echo "     systemctl start budgie@$APP_USER"
-    echo
-    echo "5. (Optional) Setup SSL with Let's Encrypt:"
-    echo "   certbot --nginx -d yourdomain.com"
-    echo
-    echo "6. Check application status:"
-    echo "   systemctl status budgie  # if using systemd"
-    echo "   pm2 status              # if using PM2"
-    echo "   curl http://localhost:3000/health"
-    echo
-    print_status "Server preparation complete!"
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        deploy_application
+    else
+        show_manual_steps
+    fi
 }
 
 # Run main function
