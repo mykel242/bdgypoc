@@ -161,18 +161,17 @@ EOF
     echo "   ln -s /etc/nginx/sites-available/budgie /etc/nginx/sites-enabled/"
     echo "   nginx -t && systemctl restart nginx"
     echo
-    echo "4. Setup systemd service OR use PM2:"
-    echo "   Option A (systemd):"
-    echo "     cp $APP_DIR/deploy/budgie.service /etc/systemd/system/"
-    echo "     systemctl daemon-reload"
-    echo "     systemctl enable budgie"
-    echo "     systemctl start budgie"
-    echo
-    echo "   Option B (PM2 - recommended):"
+    echo "4. Start the application with PM2:"
     echo "     cd $APP_DIR"
     echo "     pm2 start server.js --name budgie"
     echo "     pm2 save"
-    echo "     pm2 startup"  # Follow the instructions it provides
+    echo "     pm2 startup  # Follow the instructions it provides"
+    echo
+    echo "   Alternative: Use systemd (optional):"
+    echo "     cp $APP_DIR/deploy/budgie@.service /etc/systemd/system/"
+    echo "     systemctl daemon-reload"
+    echo "     systemctl enable budgie@$APP_USER"
+    echo "     systemctl start budgie@$APP_USER"
     echo
     echo "5. (Optional) Setup SSL with Let's Encrypt:"
     echo "   certbot --nginx -d yourdomain.com"

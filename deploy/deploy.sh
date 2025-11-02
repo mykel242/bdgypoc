@@ -129,18 +129,18 @@ esac
 # Restart application
 print_status "Restarting application..."
 
-# Check if using systemd or PM2
+# Default to PM2, fallback to systemd
 ssh -p $SERVER_PORT $REMOTE "command -v pm2" &> /dev/null
 if [ $? -eq 0 ]; then
-    # Using PM2
+    # Using PM2 (preferred)
     print_info "Restarting with PM2..."
-    ssh -p $SERVER_PORT $REMOTE "cd $APP_DIR && pm2 restart budgie"
+    ssh -p $SERVER_PORT $REMOTE "cd $APP_DIR && pm2 restart budgie || pm2 start server.js --name budgie"
 
     # Show status
     ssh -p $SERVER_PORT $REMOTE "pm2 status budgie"
 else
-    # Using systemd
-    print_info "Restarting with systemd..."
+    # Fallback to systemd
+    print_info "PM2 not found, using systemd..."
     ssh -p $SERVER_PORT $REMOTE "sudo systemctl restart budgie@$SERVER_USER"
 
     # Show status

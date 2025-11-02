@@ -58,18 +58,17 @@ ln -s /etc/nginx/sites-available/budgie /etc/nginx/sites-enabled/
 nginx -t
 systemctl restart nginx
 
-# Option A: Use PM2 (Recommended)
+# Start with PM2 (Primary method)
 cd /opt/budgie
 pm2 start server.js --name budgie
 pm2 save
 pm2 startup  # Follow instructions provided
 
-# Option B: Use systemd
-cp deploy/budgie@.service /etc/systemd/system/
-systemctl daemon-reload
-# Replace 'mykel' with your username
-systemctl enable budgie@mykel
-systemctl start budgie@mykel
+# Alternative: Use systemd (if you prefer traditional services)
+# cp deploy/budgie@.service /etc/systemd/system/
+# systemctl daemon-reload
+# systemctl enable budgie@mykel  # Replace 'mykel' with your username
+# systemctl start budgie@mykel
 ```
 
 ## Architecture
@@ -152,16 +151,17 @@ User → Nginx → Node.js/Express → API Routes → PostgreSQL
 
 ### Check Application Status
 ```bash
-# PM2
+# PM2 (Primary method)
 pm2 status
 pm2 logs budgie
-
-# Systemd (replace 'mykel' with your username)
-systemctl status budgie@mykel
-journalctl -u budgie@mykel -f
+pm2 restart budgie
 
 # Health endpoint
 curl http://localhost:3000/health
+
+# Alternative: Systemd (if using systemd instead)
+# systemctl status budgie@mykel  # Replace 'mykel' with your username
+# journalctl -u budgie@mykel -f
 ```
 
 ### Nginx Logs
@@ -173,9 +173,11 @@ tail -f /var/log/nginx/error.log
 ## Troubleshooting
 
 ### Application Won't Start
-1. Check logs: `pm2 logs` or `journalctl -u budgie`
+1. Check logs: `pm2 logs budgie`
 2. Verify Node.js version: `node --version` (should be 18+)
 3. Check permissions: `ls -la /opt/budgie`
+4. Restart PM2: `pm2 restart budgie`
+5. If using systemd instead: `journalctl -u budgie@mykel`
 
 ### Nginx 502 Bad Gateway
 1. Ensure app is running: `curl localhost:3000`
