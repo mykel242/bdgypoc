@@ -79,5 +79,10 @@ budgie/
 - Users will export/import data when ready to migrate
 
 ### Git Status
-- Last commit: "Update setup script to automate Tailwind CSS v4 setup and Node.js version checks"
+- Last commit: "Restore backend/server.js that was accidentally deleted"
 - Working tree clean
+
+### Known Issues Fixed
+- ✅ Fixed infinite loop in `npm run dev` (was recursively calling itself)
+- ✅ Fixed dev scripts to run nodemon directly on backend/server.js
+- ✅ Restored backend/server.js that was accidentally deleted
