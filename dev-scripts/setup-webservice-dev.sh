@@ -73,7 +73,7 @@ npm install --save-dev \
 # Create SvelteKit frontend
 print_status "Creating SvelteKit frontend..."
 if [ ! -d "frontend" ]; then
-    npx create-svelte@latest frontend
+    npx sv create frontend --template minimal --types typescript --no-add-ons
     cd frontend
 
     # Install frontend dependencies

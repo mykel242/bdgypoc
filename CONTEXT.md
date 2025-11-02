@@ -22,20 +22,14 @@
 4. ✅ Created cleanup script (`dev-scripts/cleanup-webservice-dev.sh`)
 5. ✅ Added macOS compatibility to scripts
 6. ✅ Fixed nginx/PM2 deployment issues on Cronus
-
-### Current Issues to Fix
-1. **Deprecated create-svelte warning**
-   - Old: `npx create-svelte@latest frontend`
-   - New: `npx sv create frontend --template minimal --types typescript --no-add-ons`
-   - Error: Script fails when frontend directory doesn't get created
+7. ✅ Fixed setup script to use `npx sv create` command
 
 ### Next Steps
-1. Fix setup script to use `npx sv create`
-2. Run setup to create development environment
-3. Start Phase 1: Database models and API
-4. Create Sequelize/Prisma models for users, ledgers, transactions
-5. Build API endpoints
-6. Create Svelte components to replace vanilla JS
+1. Run setup to create development environment
+2. Start Phase 1: Database models and API
+3. Create Sequelize/Prisma models for users, ledgers, transactions
+4. Build API endpoints
+5. Create Svelte components to replace vanilla JS
 
 ### Key Commands
 ```bash
@@ -80,4 +74,4 @@ budgie/
 
 ### Git Status
 - Last commit: "Add macOS compatibility for development setup scripts"
-- Need to commit: Fixed setup script with sv command
+- Ready to commit: Fixed setup script to use npx sv create command
