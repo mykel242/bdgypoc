@@ -132,6 +132,12 @@ body.welcome-state {
     color: #e74c3c;
 }
 
+.recent-ledger-balance.unavailable {
+    color: #6c757d;
+    font-style: italic;
+    font-weight: 400;
+}
+
 .no-ledgers-message {
     text-align: center;
     padding: 40px;
@@ -292,4 +298,16 @@ body.document-state #close-ledger-btn {
     .recent-ledger-balance {
         margin-top: 8px;
     }
+}
+
+/* Clean up button styling */
+#cleanup-registry-btn {
+    border-color: #e0a500;
+    color: #e0a500;
+}
+
+#cleanup-registry-btn:hover {
+    background: #fef7e0;
+    border-color: #d4a400;
+    color: #d4a400;
 }

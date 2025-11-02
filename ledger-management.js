@@ -70,9 +70,14 @@ const LedgerManager = {
           if (confirmDelete) {
             TransactionManager.deleteLedger(activeLedger);
 
-            // Refresh the ledger display
-            if (window.LedgerController) {
-              LedgerController.renderLedger();
+            // Close the current ledger and return to welcome screen
+            if (window.AppStateManager) {
+              AppStateManager.closeLedger();
+            } else {
+              // Fallback: clear display and refresh
+              if (window.LedgerController) {
+                LedgerController.renderLedger();
+              }
             }
           }
         } else {

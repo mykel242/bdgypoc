@@ -103,6 +103,7 @@ const TransactionManager = {
   },
 
   setActiveLedger(name) {
+    console.log('Setting active ledger to:', name);
     localStorage.setItem(this.ACTIVE_LEDGER_KEY, name);
   },
 
@@ -134,25 +135,27 @@ const TransactionManager = {
   getStartingBalance() {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
+      console.log('getStartingBalance: No active ledger');
       return 0; // No active ledger
     }
 
-    const stored = localStorage.getItem(
-      this.getStartingBalanceKey(activeLedger),
-    );
+    const key = this.getStartingBalanceKey(activeLedger);
+    const stored = localStorage.getItem(key);
+    console.log('getStartingBalance for ledger:', activeLedger, 'key:', key, 'value:', stored);
     return stored ? parseFloat(stored) : 0;
   },
 
   saveStartingBalance(balance) {
     const activeLedger = this.getActiveLedger();
     if (!activeLedger) {
+      console.log('saveStartingBalance: No active ledger');
       return false; // No active ledger
     }
 
-    localStorage.setItem(
-      this.getStartingBalanceKey(activeLedger),
-      balance.toFixed(2),
-    );
+    const key = this.getStartingBalanceKey(activeLedger);
+    const value = balance.toFixed(2);
+    console.log('saveStartingBalance for ledger:', activeLedger, 'key:', key, 'value:', value);
+    localStorage.setItem(key, value);
     return true;
   },
 

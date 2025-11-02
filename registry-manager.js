@@ -58,7 +58,8 @@ const RegistryManager = {
                     currentBalance: 0,
                     dateRange: [null, null]
                 },
-                status: 'synced'
+                status: 'synced',
+                ledgerData: null // Will be populated separately if needed
             };
             cache.ledgers.push(ledgerEntry);
         }
@@ -199,11 +200,15 @@ const RegistryManager = {
         let dateRange = [null, null];
         
         if (transactions.length > 0) {
-            // Calculate running balance
+            // Calculate total credits and debits (same method as legacy system)
+            let totalCredits = 0;
+            let totalDebits = 0;
             transactions.forEach(txn => {
-                const amount = (txn.credit || 0) - (txn.debit || 0);
-                currentBalance += amount;
+                totalCredits += txn.credit || 0;
+                totalDebits += txn.debit || 0;
             });
+            
+            currentBalance = startingBalance + totalCredits - totalDebits;
             
             // Find date range
             const dates = transactions
@@ -314,30 +319,58 @@ const RegistryManager = {
         // Check each ledger entry
         for (let i = cache.ledgers.length - 1; i >= 0; i--) {
             const ledger = cache.ledgers[i];
+            let shouldRemove = false;
             
             try {
-                // Try to validate file exists (basic check)
-                if (typeof ledger.filePath === 'string') {
-                    // For fallback file paths, we can't easily validate existence
-                    // Mark as potentially stale but keep in cache
-                    ledger.status = 'unverified';
-                } else if (ledger.filePath instanceof FileSystemFileHandle) {
-                    try {
-                        // Try to get file info to verify it still exists
-                        await ledger.filePath.getFile();
-                        ledger.status = 'synced';
-                    } catch (error) {
-                        // File no longer accessible, remove from cache
-                        cache.ledgers.splice(i, 1);
-                        results.removed++;
-                        continue;
+                // Check if this is a mock/test entry (fake file paths)
+                if (typeof ledger.filePath === 'string' && 
+                    (ledger.filePath.startsWith('/mock/') || 
+                     ledger.filePath.startsWith('/fake/') ||
+                     ledger.filePath === '/test/path.budgie')) {
+                    console.log('Removing test/mock entry:', ledger.title);
+                    shouldRemove = true;
+                }
+                
+                // Check if ledger exists in TransactionManager (for legacy entries)
+                else if (window.TransactionManager && typeof ledger.filePath === 'string') {
+                    const ledgers = window.TransactionManager.getLedgers() || [];
+                    if (!ledgers.includes(ledger.title)) {
+                        console.log('Removing orphaned legacy entry:', ledger.title);
+                        shouldRemove = true;
+                    } else {
+                        ledger.status = 'legacy';
                     }
                 }
                 
-                results.updated++;
+                // Try FileSystemFileHandle validation
+                else if (ledger.filePath instanceof FileSystemFileHandle) {
+                    try {
+                        await ledger.filePath.getFile();
+                        ledger.status = 'synced';
+                    } catch (error) {
+                        console.log('Removing inaccessible file entry:', ledger.title);
+                        shouldRemove = true;
+                    }
+                }
+                
+                // Remove entries with invalid or missing identifiers
+                else if (!ledger.fileId || !ledger.title) {
+                    console.log('Removing invalid entry with missing data');
+                    shouldRemove = true;
+                }
+                
+                // Remove the entry if flagged
+                if (shouldRemove) {
+                    cache.ledgers.splice(i, 1);
+                    results.removed++;
+                } else {
+                    results.updated++;
+                }
                 
             } catch (error) {
                 console.warn('Error refreshing ledger entry:', ledger.fileId, error);
+                // Remove entries that cause errors
+                cache.ledgers.splice(i, 1);
                 results.errors++;
             }
         }

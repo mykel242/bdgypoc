@@ -10,10 +10,22 @@ const LedgerRenderer = {
 
     this.clearTransactionRows(ledgerBody);
 
-    // Get actual transactions from the transaction manager
-    const activeLedger = TransactionManager.getActiveLedger();
-    console.log("Active ledger:", activeLedger);
-    const transactions = TransactionManager.getTransactions();
+    // Get transactions - prefer FileManager over TransactionManager
+    let transactions = [];
+    let activeLedger = null;
+    
+    if (window.FileManager && window.FileManager.getCurrentLedger()) {
+      // Use FileManager for file-based ledgers
+      transactions = window.FileManager.getTransactions();
+      activeLedger = window.FileManager.getCurrentLedger().metadata.title;
+      console.log("Rendering from FileManager - Active ledger:", activeLedger);
+    } else if (window.TransactionManager) {
+      // Fallback to TransactionManager for legacy ledgers
+      activeLedger = TransactionManager.getActiveLedger();
+      transactions = TransactionManager.getTransactions();
+      console.log("Rendering from TransactionManager - Active ledger:", activeLedger);
+    }
+    
     console.log("Transactions to render:", transactions.length);
     console.log("Transactions data:", transactions);
 

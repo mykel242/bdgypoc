@@ -127,8 +127,7 @@ const AppStateManager = {
         document.getElementById('current-ledger-name')?.classList.add('hidden');
         document.getElementById('close-ledger-btn')?.classList.add('hidden');
         
-        // Update recent ledgers from registry
-        this.updateRecentLedgers();
+        // Recent ledgers removed - pure file-based approach
     },
 
     /**
@@ -181,41 +180,96 @@ const AppStateManager = {
     },
     
     /**
-     * Open ledger from registry entry
+     * Open ledger from registry entry with error handling
      * @param {object} registryEntry - Registry entry with fileId and filePath
+     * @param {HTMLElement} itemElement - The clicked ledger item element
      */
-    async openLedgerFromRegistry(registryEntry) {
+    async openLedgerFromRegistry(registryEntry, itemElement) {
         try {
             console.log('Opening ledger from registry:', registryEntry.title);
             
-            // For now, we'll need to integrate with the existing system
-            // This is a bridge until we fully migrate
-            if (window.TransactionManager) {
-                const ledgers = window.TransactionManager.getLedgers() || [];
-                if (ledgers.includes(registryEntry.title)) {
-                    window.TransactionManager.setActiveLedger(registryEntry.title);
+            // First try to load from stored data
+            let ledgerData = null;
+            if (window.RegistryManager) {
+                ledgerData = window.RegistryManager.getLedgerData(registryEntry.fileId);
+            }
+            
+            if (ledgerData) {
+                console.log('Loaded ledger from stored data');
+                
+                // Set in FileManager
+                if (window.FileManager) {
+                    window.FileManager.setCurrentLedger(ledgerData);
+                }
+                
+                this.showDocumentView(ledgerData);
+                
+                setTimeout(() => {
+                    if (window.LedgerController && window.LedgerController.renderLedger) {
+                        window.LedgerController.renderLedger();
+                    }
                     
-                    // Create fake ledger data structure for compatibility
-                    const fakeData = {
-                        fileId: registryEntry.fileId,
-                        metadata: {
-                            title: registryEntry.title
+                    // Update summary after viewing ledger
+                    this.updateLedgerSummaryFromViewing(ledgerData.metadata.title);
+                }, 100);
+            } else {
+                // No stored data, prompt user to open the .budgie file
+                console.log('No stored data, prompting for file');
+                if (window.FileManager) {
+                    ledgerData = await window.FileManager.openLedger();
+                    if (ledgerData) {
+                        // Verify it matches the expected ledger
+                        if (ledgerData.fileId !== registryEntry.fileId) {
+                            const proceed = confirm(`The opened file appears to be a different ledger ("${ledgerData.metadata.title}"). Continue anyway?`);
+                            if (!proceed) return;
                         }
-                    };
-                    
-                    this.showDocumentView(fakeData);
-                    
-                    // Render using existing system
-                    setTimeout(() => {
-                        if (window.LedgerController && window.LedgerController.renderLedger) {
-                            window.LedgerController.renderLedger();
+                        
+                        // Store for next time
+                        if (window.RegistryManager) {
+                            window.RegistryManager.storeLedgerData(ledgerData.fileId, ledgerData);
                         }
-                    }, 100);
+                        
+                        this.showDocumentView(ledgerData);
+                        
+                        setTimeout(() => {
+                            if (window.LedgerController && window.LedgerController.renderLedger) {
+                                window.LedgerController.renderLedger();
+                            }
+                            
+                            // Update summary after viewing ledger
+                            this.updateLedgerSummaryFromViewing(ledgerData.metadata.title);
+                        }, 100);
+                    }
+                } else {
+                    throw new Error('FileManager not available');
                 }
             }
         } catch (error) {
             console.error('Error opening ledger from registry:', error);
-            alert('Error opening ledger: ' + error.message);
+            this.showLedgerError(registryEntry.title, error.message, itemElement);
+        }
+    },
+    
+    /**
+     * Open legacy ledger with error handling
+     * @param {string} ledgerTitle - Title of the ledger
+     * @param {HTMLElement} itemElement - The clicked ledger item element
+     */
+    async openLegacyLedgerWithErrorHandling(ledgerTitle, itemElement) {
+        try {
+            if (!window.TransactionManager) {
+                throw new Error('TransactionManager not available');
+            }
+            
+            const ledgers = window.TransactionManager.getLedgers() || [];
+            if (!ledgers.includes(ledgerTitle)) {
+                throw new Error(`Ledger "${ledgerTitle}" no longer exists in local storage.`);
+            }
+            
+            this.openLegacyLedger(ledgerTitle);
+        } catch (error) {
+            console.error('Error opening legacy ledger:', error);
+            this.showLedgerError(ledgerTitle, error.message, itemElement);
         }
     },
 
@@ -226,6 +280,11 @@ const AppStateManager = {
         console.log('Closing current ledger');
         
         if (this.currentState !== 'document') return;
+        
+        // Update summary before closing
+        if (this.currentLedgerData && this.currentLedgerData.metadata.title) {
+            this.updateLedgerSummaryFromViewing(this.currentLedgerData.metadata.title);
+        }
         
         // Save current ledger if there are unsaved changes
         this.promptSaveIfNeeded();
@@ -351,114 +410,103 @@ const AppStateManager = {
     },
 
     /**
-     * Update recent ledgers display from registry
+     * Add registry cleanup button to welcome screen
      */
-    updateRecentLedgers() {
-        const listContainer = document.getElementById('recent-ledgers-list');
-        const noLedgersMsg = document.getElementById('no-ledgers-message');
+    addRegistryCleanupButton() {
+        // Find the welcome actions section
+        const welcomeActions = document.querySelector('.welcome-actions');
+        if (!welcomeActions) return;
         
-        if (!listContainer) return;
+        // Check if cleanup button already exists
+        if (document.getElementById('cleanup-registry-btn')) return;
         
-        // Get recent ledgers from registry
-        const recentLedgers = window.RegistryManager ? 
-            RegistryManager.getRecentLedgers(10) : [];
+        // Create cleanup button
+        const cleanupBtn = document.createElement('button');
+        cleanupBtn.id = 'cleanup-registry-btn';
+        cleanupBtn.className = 'welcome-btn';
+        cleanupBtn.innerHTML = '<span class="btn-icon">🧹</span> Clean Up';
+        cleanupBtn.title = 'Remove invalid entries from recent ledgers';
         
-        // Also get legacy ledgers from TransactionManager for transition period
-        const legacyLedgers = this.getLegacyLedgers();
+        cleanupBtn.addEventListener('click', () => this.showRegistryCleanupDialog());
         
-        // Combine and deduplicate
-        const allLedgers = [...recentLedgers, ...legacyLedgers]
-            .filter((ledger, index, self) => 
-                index === self.findIndex(l => l.title === ledger.title)
-            )
-            .slice(0, 10);
-        
-        if (allLedgers.length === 0) {
-            listContainer.innerHTML = '';
-            if (noLedgersMsg) noLedgersMsg.classList.remove('hidden');
-            return;
-        }
-        
-        if (noLedgersMsg) noLedgersMsg.classList.add('hidden');
-        
-        // Build HTML
-        listContainer.innerHTML = allLedgers.map(ledger => {
-            const summary = ledger.summary || { currentBalance: 0, transactionCount: 0 };
-            const balanceClass = summary.currentBalance >= 0 ? 'positive' : 'negative';
-            const balance = Math.abs(summary.currentBalance).toFixed(2);
-            const lastAccessed = this.formatRelativeTime(ledger.lastAccessed || ledger.lastOpened);
-            
-            return `
-                <div class="recent-ledger-item" data-ledger="${ledger.title}" data-file-id="${ledger.fileId || ''}">
-                    <div class="recent-ledger-info">
-                        <div class="recent-ledger-name">${ledger.title}</div>
-                        <div class="recent-ledger-meta">
-                            <span>${lastAccessed}</span>
-                            <span>${summary.transactionCount} transactions</span>
-                        </div>
-                    </div>
-                    <div class="recent-ledger-balance ${balanceClass}">
-                        ${summary.currentBalance >= 0 ? '+' : '-'}$${balance}
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        // Add click handlers
-        listContainer.querySelectorAll('.recent-ledger-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const ledgerTitle = item.getAttribute('data-ledger');
-                const fileId = item.getAttribute('data-file-id');
-                
-                if (fileId && window.RegistryManager) {
-                    // Use new file-system approach
-                    const registryEntry = RegistryManager.findLedger(fileId);
-                    if (registryEntry) {
-                        this.openLedgerFromRegistry(registryEntry);
-                    }
-                } else if (ledgerTitle) {
-                    // Fallback to legacy approach
-                    this.openLegacyLedger(ledgerTitle);
-                }
-            });
-        });
+        // Add button to the actions
+        welcomeActions.appendChild(cleanupBtn);
     },
     
     /**
-     * Get legacy ledgers for transition period
+     * Show registry cleanup dialog
+     */
+    async showRegistryCleanupDialog() {
+        if (!window.RegistryManager) {
+            alert('Registry manager not available');
+            return;
+        }
+        
+        try {
+            // Get current registry stats
+            const stats = RegistryManager.getStats();
+            const allLedgers = RegistryManager.getAllLedgers();
+            
+            const message = `Registry Cleanup\n\n` +
+                `Total ledgers: ${stats.totalLedgers}\n` +
+                `Cache age: ${this.formatCacheAge(stats.cacheAge)}\n\n` +
+                `This will:\n` +
+                `- Remove entries for missing files\n` +
+                `- Validate file accessibility\n` +
+                `- Clean up duplicate entries\n\n` +
+                `Continue with cleanup?`;
+            
+            if (confirm(message)) {
+                const result = await RegistryManager.refreshCache();
+                
+                const resultMessage = `Cleanup Complete\n\n` +
+                    `Processed: ${result.total} entries\n` +
+                    `Updated: ${result.updated}\n` +
+                    `Removed: ${result.removed}\n` +
+                    `Errors: ${result.errors}`;
+                
+                alert(resultMessage);
+                
+                // Recent ledgers removed - pure file-based approach
+            }
+        } catch (error) {
+            console.error('Error during registry cleanup:', error);
+            alert('Error during cleanup: ' + error.message);
+        }
+    },
+    
+    /**
+     * Format cache age for display
+     */
+    formatCacheAge(ageMs) {
+        if (!ageMs) return 'Unknown';
+        
+        const minutes = Math.floor(ageMs / 60000);
+        const hours = Math.floor(ageMs / 3600000);
+        const days = Math.floor(ageMs / 86400000);
+        
+        if (minutes < 60) return `${minutes} minutes`;
+        if (hours < 24) return `${hours} hours`;
+        return `${days} days`;
+    },
+    
+    
+    /**
+     * Get legacy ledgers for transition period (without balance calculation)
      */
     getLegacyLedgers() {
         if (!window.TransactionManager) return [];
         
         const ledgers = window.TransactionManager.getLedgers() || [];
         return ledgers.map(name => {
-            // Calculate summary for legacy ledger
-            const previousActive = window.TransactionManager.getActiveLedger();
-            window.TransactionManager.setActiveLedger(name);
-            
-            const transactions = window.TransactionManager.getTransactions() || [];
-            const startingBalance = window.TransactionManager.getStartingBalance() || 0;
-            
-            let totalDebits = 0, totalCredits = 0;
-            transactions.forEach(t => {
-                totalDebits += t.debit || 0;
-                totalCredits += t.credit || 0;
-            });
-            
-            const currentBalance = startingBalance + totalCredits - totalDebits;
-            
-            // Restore previous active ledger
-            if (previousActive) {
-                window.TransactionManager.setActiveLedger(previousActive);
-            }
-            
             return {
                 title: name,
                 fileId: null, // Legacy ledgers don't have file IDs yet
                 lastAccessed: new Date().toISOString(),
+                hasBeenViewed: false, // Legacy ledgers haven't been viewed in new system yet
                 summary: {
-                    transactionCount: transactions.length,
-                    currentBalance: currentBalance
+                    transactionCount: 0, // Will be populated when ledger is viewed
+                    currentBalance: null // Balance unavailable until viewed
                 }
             };
         });
@@ -471,18 +519,161 @@ const AppStateManager = {
         if (window.TransactionManager) {
             window.TransactionManager.setActiveLedger(ledgerName);
             
-            const fakeData = {
-                fileId: 'legacy_' + ledgerName,
-                metadata: { title: ledgerName }
+            // Get data from TransactionManager and convert to .budgie format
+            const transactions = window.TransactionManager.getTransactions() || [];
+            const startingBalance = window.TransactionManager.getStartingBalance() || 0;
+            const startingDate = window.TransactionManager.getStartingBalanceDate() || new Date().toISOString().split('T')[0];
+            
+            const ledgerData = {
+                fileId: 'legacy_' + ledgerName.replace(/[^a-zA-Z0-9]/g, '_'),
+                version: '2.0.0',
+                metadata: { 
+                    title: ledgerName,
+                    created: new Date().toISOString(),
+                    lastModified: new Date().toISOString()
+                },
+                data: {
+                    startingBalance: startingBalance,
+                    startingDate: startingDate,
+                    transactions: transactions
+                }
             };
             
-            this.showDocumentView(fakeData);
+            // Set in FileManager if available
+            if (window.FileManager) {
+                window.FileManager.setCurrentLedger(ledgerData);
+            }
+            
+            this.showDocumentView(ledgerData);
             
             setTimeout(() => {
                 if (window.LedgerController && window.LedgerController.renderLedger) {
                     window.LedgerController.renderLedger();
                 }
+                
+                // Update summary after viewing ledger
+                this.updateLedgerSummaryFromViewing(ledgerName);
             }, 100);
+        }
+    },
+    
+    /**
+     * Update ledger summary when viewed (single source of truth)
+     * Uses FileManager data when available
+     */
+    updateLedgerSummaryFromViewing(ledgerName) {
+        let transactions = [];
+        let startingBalance = 0;
+        let currentBalance = 0;
+        let fileId = null;
+        
+        // Get data from FileManager if available
+        if (window.FileManager && window.FileManager.getCurrentLedger()) {
+            const ledgerData = window.FileManager.getCurrentLedger();
+            fileId = ledgerData.fileId;
+            transactions = ledgerData.data.transactions || [];
+            startingBalance = ledgerData.data.startingBalance || 0;
+            
+            // Calculate balance from FileManager data
+            let totalDebits = 0, totalCredits = 0;
+            transactions.forEach(t => {
+                totalDebits += t.debit || 0;
+                totalCredits += t.credit || 0;
+            });
+            currentBalance = startingBalance + totalCredits - totalDebits;
+            console.log('Calculated balance from FileManager:', currentBalance);
+            
+        } else if (window.TransactionManager) {
+            // Fallback to TransactionManager for legacy ledgers
+            const previousActive = window.TransactionManager.getActiveLedger();
+            window.TransactionManager.setActiveLedger(ledgerName);
+            
+            transactions = window.TransactionManager.getTransactions() || [];
+            startingBalance = window.TransactionManager.getStartingBalance() || 0;
+            fileId = 'legacy_' + ledgerName;
+            
+            let totalDebits = 0, totalCredits = 0;
+            transactions.forEach(t => {
+                totalDebits += t.debit || 0;
+                totalCredits += t.credit || 0;
+            });
+            currentBalance = startingBalance + totalCredits - totalDebits;
+            console.log('Calculated balance from TransactionManager:', currentBalance);
+            
+            // Restore previous active ledger
+            if (previousActive) {
+                window.TransactionManager.setActiveLedger(previousActive);
+            }
+        }
+        
+        // Update or add to registry with summary
+        if (window.RegistryManager) {
+            const summary = {
+                transactionCount: transactions.length,
+                currentBalance: Math.round(currentBalance * 100) / 100
+            };
+            
+            RegistryManager.addLedger(fileId, ledgerName, ledgerName, summary, true);
+            console.log('Updated summary for', ledgerName, ':', summary);
+        }
+    },
+    
+    /**
+     * Handle missing ledger error
+     */
+    handleMissingLedger(ledgerTitle, fileId, itemElement) {
+        console.error('Ledger not found in registry:', fileId);
+        this.showLedgerError(ledgerTitle, 'Ledger not found in registry. It may have been deleted.', itemElement);
+    },
+    
+    /**
+     * Handle invalid ledger item
+     */
+    handleInvalidLedgerItem(itemElement) {
+        console.error('Invalid ledger item clicked');
+        this.showLedgerError('Unknown', 'Invalid ledger entry. No identifier found.', itemElement);
+    },
+    
+    /**
+     * Show error dialog for ledger loading issues
+     */
+    showLedgerError(ledgerTitle, errorMessage, itemElement) {
+        const fullMessage = `Cannot open "${ledgerTitle}"\n\n${errorMessage}\n\nWould you like to remove this entry from your recent ledgers?`;
+        
+        if (confirm(fullMessage)) {
+            this.removeLedgerFromRecents(ledgerTitle, itemElement);
+        }
+    },
+    
+    /**
+     * Remove ledger from recent ledgers list
+     */
+    removeLedgerFromRecents(ledgerTitle, itemElement) {
+        try {
+            const fileId = itemElement.getAttribute('data-file-id');
+            
+            // Remove from registry if it has a file ID
+            if (fileId && window.RegistryManager) {
+                RegistryManager.removeLedger(fileId);
+                console.log('Removed ledger from registry:', fileId);
+            }
+            
+            // Remove the UI element
+            itemElement.remove();
+            
+            // Check if we need to show the "no ledgers" message
+            const listContainer = document.getElementById('recent-ledgers-list');
+            const noLedgersMsg = document.getElementById('no-ledgers-message');
+            
+            if (listContainer && listContainer.children.length === 0 && noLedgersMsg) {
+                noLedgersMsg.classList.remove('hidden');
+            }
+            
+            console.log(`Removed "${ledgerTitle}" from recent ledgers`);
+            
+        } catch (error) {
+            console.error('Error removing ledger from recents:', error);
+            alert('Error removing ledger from list: ' + error.message);
         }
     },
 
@@ -615,7 +806,7 @@ const AppStateManager = {
     },
 
     /**
-     * Import ledger from base64 file (legacy compatibility)
+     * Import ledger from base64 file and convert to .budgie
      */
     importBase64Ledger() {
         const fileInput = document.createElement('input');
@@ -628,26 +819,54 @@ const AppStateManager = {
             
             const reader = new FileReader();
             
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 try {
                     const base64Data = event.target.result;
                     
-                    // Use legacy import for now
-                    if (window.TransactionManager && window.TransactionManager.importLedgerData) {
-                        const result = window.TransactionManager.importLedgerData(base64Data);
-                        
-                        if (result.success) {
-                            this.updateRecentLedgers();
-                            
-                            if (result.ledgerName) {
-                                this.openLegacyLedger(result.ledgerName);
-                            }
-                            
-                            alert(result.message);
-                        } else {
-                            alert(result.message);
+                    // Decode base64 to get ledger data
+                    const jsonString = decodeURIComponent(escape(atob(base64Data)));
+                    const importData = JSON.parse(jsonString);
+                    
+                    // Convert to .budgie format
+                    const ledgerData = {
+                        fileId: window.FileFormats ? window.FileFormats.generateFileId() : 'import_' + Date.now(),
+                        version: '2.0.0',
+                        metadata: {
+                            title: importData.name || 'Imported Ledger',
+                            created: new Date().toISOString(),
+                            lastModified: new Date().toISOString()
+                        },
+                        data: {
+                            startingBalance: parseFloat(importData.startingBalance) || 0,
+                            startingDate: importData.startingBalanceDate || new Date().toISOString().split('T')[0],
+                            transactions: importData.transactions || []
                         }
+                    };
+                    
+                    // Set in FileManager
+                    if (window.FileManager) {
+                        window.FileManager.setCurrentLedger(ledgerData);
                     }
+                    
+                    // Open the ledger
+                    this.showDocumentView(ledgerData);
+                    
+                    // Render and prompt to save
+                    setTimeout(async () => {
+                        if (window.LedgerController && window.LedgerController.renderLedger) {
+                            window.LedgerController.renderLedger();
+                        }
+                        
+                        // Prompt to save as .budgie file
+                        alert(`Successfully imported "${ledgerData.metadata.title}". Please save this ledger as a .budgie file.`);
+                        
+                        if (window.FileManager) {
+                            const filePath = await window.FileManager.saveCurrentLedger();
+                            if (filePath) {
+                                alert('Ledger saved successfully!');
+                            }
+                        }
+                    }, 100);
                 } catch (error) {
                     console.error('Error importing file:', error);
                     alert('Error importing file: ' + error.message);
@@ -663,3 +882,15 @@ const AppStateManager = {
 
 // Export for use
 window.AppStateManager = AppStateManager;
+// Developer helper functions
+window.clearRegistryData = function() {
+    if (window.RegistryManager) {
+        RegistryManager.clearCache();
+        // Recent ledgers removed - pure file-based approach
+        console.log('Registry data cleared.');
+    } else {
+        console.log('RegistryManager not available');
+    }
+};
+
+console.log('Developer helper available: clearRegistryData()');

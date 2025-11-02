@@ -404,6 +404,21 @@ const FileManager = {
     },
 
     /**
+     * Set current ledger data (for legacy/imported ledgers)
+     * @param {object} ledgerData - Ledger data to set as current
+     */
+    setCurrentLedger(ledgerData) {
+        if (!ledgerData || !ledgerData.fileId) {
+            throw new Error('Invalid ledger data');
+        }
+        
+        this.currentFileId = ledgerData.fileId;
+        this.currentFilePath = null; // No file path for programmatically set data
+        this.currentData = ledgerData;
+        console.log('Set current ledger:', ledgerData.metadata.title);
+    },
+    
+    /**
      * Clear current session
      */
     clearCurrentSession() {
@@ -430,6 +445,7 @@ const FileManager = {
             getTransactions: this.getTransactions.bind(this),
             getStartingBalance: this.getStartingBalance.bind(this),
             updateStartingBalance: this.updateStartingBalance.bind(this),
+            setCurrentLedger: this.setCurrentLedger.bind(this),
             clearCurrentSession: this.clearCurrentSession.bind(this)
         };
     }

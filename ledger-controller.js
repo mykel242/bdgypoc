@@ -66,8 +66,22 @@ const LedgerController = {
     balanceInput.step = "0.01";
     balanceInput.className = "starting-balance-input";
 
-    // Load starting balance for the current active ledger
-    const balance = TransactionManager.getStartingBalance();
+    // Load starting balance - prefer FileManager over TransactionManager
+    let balance = 0;
+    let activeLedger = null;
+    
+    if (window.FileManager && window.FileManager.getCurrentLedger()) {
+      // Use FileManager for file-based ledgers
+      balance = window.FileManager.getStartingBalance();
+      activeLedger = window.FileManager.getCurrentLedger().metadata.title;
+      console.log('Loading starting balance from FileManager for:', activeLedger, 'balance:', balance);
+    } else if (window.TransactionManager) {
+      // Fallback to TransactionManager for legacy ledgers
+      activeLedger = TransactionManager.getActiveLedger();
+      balance = TransactionManager.getStartingBalance();
+      console.log('Loading starting balance from TransactionManager for:', activeLedger, 'balance:', balance);
+    }
+    
     balanceInput.value = balance.toFixed(2);
 
     // Clear the cell and add the input
@@ -79,7 +93,27 @@ const LedgerController = {
       const newBalance = parseFloat(balanceInput.value) || 0;
       // Ensure proper formatting
       balanceInput.value = newBalance.toFixed(2);
-      TransactionManager.saveStartingBalance(newBalance);
+      
+      if (window.FileManager && window.FileManager.getCurrentLedger()) {
+        // Use FileManager for file-based ledgers
+        const currentLedger = window.FileManager.getCurrentLedger().metadata.title;
+        if (currentLedger === activeLedger) {
+          window.FileManager.updateStartingBalance(newBalance);
+          console.log('Saved starting balance via FileManager:', newBalance, 'for ledger:', currentLedger);
+        } else {
+          console.warn('Ledger changed during edit, not saving. Was:', activeLedger, 'Now:', currentLedger);
+        }
+      } else if (window.TransactionManager) {
+        // Fallback to TransactionManager for legacy ledgers
+        const currentLedger = TransactionManager.getActiveLedger();
+        if (currentLedger === activeLedger) {
+          TransactionManager.saveStartingBalance(newBalance);
+          console.log('Saved starting balance via TransactionManager:', newBalance, 'for ledger:', currentLedger);
+        } else {
+          console.warn('Ledger changed during edit, not saving. Was:', activeLedger, 'Now:', currentLedger);
+        }
+      }
+      
       this.updateTotals();
     });
 
