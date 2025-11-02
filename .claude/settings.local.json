@@ -20,7 +20,8 @@
       "Bash(npm run db:test:*)",
       "Bash(pkill:*)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
