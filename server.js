@@ -11,23 +11,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Security headers
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],  // unsafe-inline needed for current inline scripts
-            styleSrc: ["'self'", "'unsafe-inline'"],   // unsafe-inline needed for inline styles
-            imgSrc: ["'self'", "data:"],
-            connectSrc: ["'self'"],
-            fontSrc: ["'self'"],
-            objectSrc: ["'none'"],
-            mediaSrc: ["'self'"],
-            frameSrc: ["'none'"],
-        },
-    },
-    crossOriginEmbedderPolicy: false,  // Disabled for now, can enable when fully migrated
-}));
+// Security headers (temporarily disabled for debugging)
+// app.use(helmet({
+//     contentSecurityPolicy: {
+//         directives: {
+//             defaultSrc: ["'self'"],
+//             scriptSrc: ["'self'", "'unsafe-inline'"],  // unsafe-inline needed for current inline scripts
+//             styleSrc: ["'self'", "'unsafe-inline'"],   // unsafe-inline needed for inline styles
+//             imgSrc: ["'self'", "data:"],
+//             connectSrc: ["'self'"],
+//             fontSrc: ["'self'"],
+//             objectSrc: ["'none'"],
+//             mediaSrc: ["'self'"],
+//             frameSrc: ["'none'"],
+//         },
+//     },
+//     crossOriginEmbedderPolicy: false,  // Disabled for now, can enable when fully migrated
+// }));
 
 // Compression for better performance
 app.use(compression());
