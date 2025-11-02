@@ -39,10 +39,23 @@ if [ ! -f "package.json" ] || [ ! -d ".git" ]; then
     print_error "Please run this script from the budgie project root directory"
 fi
 
+# Check for .nvmrc and recommend using it
+if [ -f ".nvmrc" ]; then
+    NVMRC_VERSION=$(cat .nvmrc)
+    print_info "Found .nvmrc with Node.js v${NVMRC_VERSION}"
+    print_info "If using nvm, run: nvm use"
+fi
+
 # Check Node.js version
 NODE_VERSION=$(node --version | cut -d 'v' -f 2 | cut -d '.' -f 1)
 if [ "$NODE_VERSION" -lt 18 ]; then
     print_error "Node.js 18+ required. Current version: $(node --version)"
+fi
+
+# SvelteKit requires Node 20.19+, 22.12+, or 24+
+if [ "$NODE_VERSION" -eq 20 ] || [ "$NODE_VERSION" -eq 21 ] || [ "$NODE_VERSION" -eq 23 ]; then
+    print_warning "SvelteKit requires Node ^20.19, ^22.12, or >=24. Current: $(node --version)"
+    print_warning "Recommended: Install Node 24 LTS with 'nvm install --lts'"
 fi
 
 print_status "Node.js version: $(node --version)"
@@ -88,8 +101,16 @@ if [ ! -d "frontend" ]; then
         autoprefixer \
         @types/node
 
-    # Initialize Tailwind CSS
-    npx tailwindcss init -p
+    # Set up Tailwind CSS v4 (no config file needed)
+    print_status "Setting up Tailwind CSS..."
+    cat > src/app.css << 'EOF'
+@import "tailwindcss";
+EOF
+
+    # Update layout to import CSS
+    sed -i '' '/<script lang="ts">/a\
+	import '\''../app.css'\'';
+' src/routes/+layout.svelte
 
     cd ..
 else
