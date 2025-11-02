@@ -1,19 +1,24 @@
 {
-  "name": "budgie",
+  "name": "budgie-webservice",
   "version": "2.0.0",
-  "description": "Personal finance ledger application",
-  "main": "server.js",
+  "description": "Budgie personal finance web service",
+  "main": "backend/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "NODE_ENV=development nodemon server.js",
-    "prod": "NODE_ENV=production node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node backend/server.js",
+    "dev": "bash scripts/dev.sh",
+    "backend": "cd backend && nodemon server.js",
+    "frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:test": "bash scripts/test-db.sh",
+    "db:reset": "bash dev-scripts/cleanup-webservice-dev.sh && bash dev-scripts/setup-webservice-dev.sh"
   },
   "keywords": [
     "finance",
     "ledger",
     "budgeting",
-    "personal-finance"
+    "svelte",
+    "postgresql"
   ],
   "author": "",
   "license": "MIT",
