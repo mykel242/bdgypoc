@@ -1,12 +1,12 @@
 [Unit]
-Description=Budgie Personal Finance Application
+Description=Budgie Personal Finance Application (%i)
 Documentation=https://github.com/yourusername/budgie
 After=network.target
 
 [Service]
 Type=simple
-User=budgie
-Group=budgie
+User=%i
+Group=%i
 WorkingDirectory=/opt/budgie
 ExecStart=/usr/bin/node /opt/budgie/server.js
 Restart=on-failure
@@ -34,3 +34,6 @@ StandardError=append:/var/log/budgie/error.log
 
 [Install]
 WantedBy=multi-user.target
+
+# Usage: systemctl enable budgie@mykel.service
+# This allows using any username with the @ syntax

@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 APP_NAME="budgie"
-APP_USER="budgie"
+APP_USER="$SUDO_USER"  # Use the user who runs the script
 APP_DIR="/opt/budgie"
 LOG_DIR="/var/log/budgie"
 REPO_URL=""  # Set this to your git repo URL if using git deployment
@@ -79,13 +79,8 @@ main() {
     print_status "Installing PM2 for process management..."
     npm install -g pm2
 
-    # Create application user
-    if id "$APP_USER" &>/dev/null; then
-        print_warning "User $APP_USER already exists"
-    else
-        print_status "Creating application user: $APP_USER"
-        useradd -r -s /bin/bash -m -d /home/$APP_USER $APP_USER
-    fi
+    # Use existing user account
+    print_status "Using existing user account: $APP_USER"
 
     # Create application directory
     print_status "Creating application directory: $APP_DIR"
@@ -174,7 +169,6 @@ EOF
     echo "     systemctl start budgie"
     echo
     echo "   Option B (PM2 - recommended):"
-    echo "     su - $APP_USER"
     echo "     cd $APP_DIR"
     echo "     pm2 start server.js --name budgie"
     echo "     pm2 save"

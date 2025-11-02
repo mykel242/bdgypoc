@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-SERVER_USER="budgie"
+SERVER_USER="mykel"  # Change this to your username on the server
 SERVER_HOST="your-server.com"  # Change this to your server IP or hostname
 SERVER_PORT="22"
 APP_DIR="/opt/budgie"
@@ -141,10 +141,10 @@ if [ $? -eq 0 ]; then
 else
     # Using systemd
     print_info "Restarting with systemd..."
-    ssh -p $SERVER_PORT $REMOTE "sudo systemctl restart budgie"
+    ssh -p $SERVER_PORT $REMOTE "sudo systemctl restart budgie@$SERVER_USER"
 
     # Show status
-    ssh -p $SERVER_PORT $REMOTE "sudo systemctl status budgie --no-pager"
+    ssh -p $SERVER_PORT $REMOTE "sudo systemctl status budgie@$SERVER_USER --no-pager"
 fi
 
 # Health check
@@ -168,7 +168,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     if [ $? -eq 0 ]; then
         ssh -p $SERVER_PORT $REMOTE "pm2 logs budgie --lines 20 --nostream"
     else
-        ssh -p $SERVER_PORT $REMOTE "sudo journalctl -u budgie -n 20 --no-pager"
+        ssh -p $SERVER_PORT $REMOTE "sudo journalctl -u budgie@$SERVER_USER -n 20 --no-pager"
     fi
 fi
 

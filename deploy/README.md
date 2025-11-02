@@ -59,17 +59,17 @@ nginx -t
 systemctl restart nginx
 
 # Option A: Use PM2 (Recommended)
-su - budgie
 cd /opt/budgie
 pm2 start server.js --name budgie
 pm2 save
 pm2 startup  # Follow instructions provided
 
 # Option B: Use systemd
-cp deploy/budgie.service /etc/systemd/system/
+cp deploy/budgie@.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable budgie
-systemctl start budgie
+# Replace 'mykel' with your username
+systemctl enable budgie@mykel
+systemctl start budgie@mykel
 ```
 
 ## Architecture
@@ -156,9 +156,9 @@ User → Nginx → Node.js/Express → API Routes → PostgreSQL
 pm2 status
 pm2 logs budgie
 
-# Systemd
-systemctl status budgie
-journalctl -u budgie -f
+# Systemd (replace 'mykel' with your username)
+systemctl status budgie@mykel
+journalctl -u budgie@mykel -f
 
 # Health endpoint
 curl http://localhost:3000/health
