@@ -6,7 +6,18 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(chmod:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(nvm use:*)",
+      "Bash(node --version)",
+      "Bash(bash:*)",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "Bash(test -f:*)",
+      "Bash(test:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(openssl rand:*)",
+      "Bash(pgrep:*)",
+      "Bash(PGPASSWORD=budgie_dev_password psql:*)",
+      "Bash(npm run db:test:*)"
     ],
     "deny": [],
     "ask": []
