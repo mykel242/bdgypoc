@@ -85,4 +85,5 @@ budgie/
 ### Known Issues Fixed
 - ✅ Fixed infinite loop in `npm run dev` (was recursively calling itself)
 - ✅ Fixed dev scripts to run nodemon directly on backend/server.js
-- ✅ Restored backend/server.js that was accidentally deleted
+- ✅ Fixed nodemon path duplication (changed "main" field to "index.js")
+- ✅ Backend server now starts correctly on port 3000
