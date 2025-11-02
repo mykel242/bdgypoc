@@ -1,0 +1,36 @@
+[Unit]
+Description=Budgie Personal Finance Application
+Documentation=https://github.com/yourusername/budgie
+After=network.target
+
+[Service]
+Type=simple
+User=budgie
+Group=budgie
+WorkingDirectory=/opt/budgie
+ExecStart=/usr/bin/node /opt/budgie/server.js
+Restart=on-failure
+RestartSec=10
+
+# Environment variables
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=0.0.0.0
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/budgie
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=512
+
+# Logging
+StandardOutput=append:/var/log/budgie/app.log
+StandardError=append:/var/log/budgie/error.log
+
+[Install]
+WantedBy=multi-user.target
