@@ -34,6 +34,11 @@ echo "  Budgie Web Service Development Setup"
 echo "============================================"
 echo
 
+# Important: Check Node version first
+print_info "IMPORTANT: Make sure you're using the correct Node.js version!"
+print_info "Run 'nvm use' before running this script if you have nvm installed."
+echo
+
 # Check if running from correct directory
 if [ ! -f "package.json" ] || [ ! -d ".git" ]; then
     print_error "Please run this script from the budgie project root directory"
