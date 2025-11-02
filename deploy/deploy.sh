@@ -81,7 +81,7 @@ case $DEPLOY_METHOD in
 
         # Install dependencies on server
         print_status "Installing dependencies on server..."
-        ssh -p $SERVER_PORT $REMOTE "cd $APP_DIR && npm ci --production"
+        ssh -p $SERVER_PORT $REMOTE "cd $APP_DIR && if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi"
         ;;
 
     2)
@@ -101,7 +101,7 @@ case $DEPLOY_METHOD in
 
         # Update dependencies if package.json changed
         print_status "Checking for dependency updates..."
-        ssh -p $SERVER_PORT $REMOTE "cd $APP_DIR && npm ci --production"
+        ssh -p $SERVER_PORT $REMOTE "cd $APP_DIR && if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi"
         ;;
 
     3)

@@ -62,7 +62,11 @@ deploy_application() {
     # Install dependencies
     print_status "Installing Node.js dependencies..."
     cd $APP_DIR
-    sudo -u $APP_USER npm ci --production
+    if [ -f "package-lock.json" ]; then
+        sudo -u $APP_USER npm ci --omit=dev
+    else
+        sudo -u $APP_USER npm install --omit=dev
+    fi
 
     # Configure nginx
     print_status "Setting up nginx configuration..."
@@ -119,7 +123,7 @@ show_manual_steps() {
     echo "   Example: rsync -av /path/to/budgie/ $APP_DIR/"
     echo
     echo "2. Install Node.js dependencies:"
-    echo "   cd $APP_DIR && npm install --production"
+    echo "   cd $APP_DIR && npm install --omit=dev"
     echo
     echo "3. Copy nginx configuration:"
     echo "   cp $APP_DIR/deploy/nginx.conf /etc/nginx/sites-available/budgie"
