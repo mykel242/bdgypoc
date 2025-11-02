@@ -132,23 +132,40 @@ print_status "Setting up PostgreSQL database..."
 # Check if PostgreSQL is running
 if ! pgrep -x "postgres" > /dev/null; then
     print_warning "PostgreSQL is not running. Starting it..."
-    if command -v systemctl &> /dev/null; then
-        sudo systemctl start postgresql
-    elif command -v brew &> /dev/null; then
+    if command -v brew &> /dev/null; then
+        print_status "Starting PostgreSQL via Homebrew..."
         brew services start postgresql
+    elif command -v systemctl &> /dev/null; then
+        sudo systemctl start postgresql
     else
-        print_error "Cannot start PostgreSQL. Please start it manually."
+        print_error "Cannot start PostgreSQL. Please install and start it manually."
+        print_info "macOS: brew install postgresql && brew services start postgresql"
+        print_info "Linux: sudo systemctl start postgresql"
+        exit 1
     fi
 fi
 
 # Create database and user
 print_status "Creating database and user..."
-sudo -u postgres psql << EOF || print_warning "Database creation failed - may already exist"
+
+# Detect OS and use appropriate PostgreSQL access method
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS - PostgreSQL user is typically the current user
+    psql postgres << EOF || print_warning "Database creation failed - may already exist"
 CREATE USER budgie_user WITH PASSWORD 'budgie_dev_password';
 CREATE DATABASE budgie_dev OWNER budgie_user;
 GRANT ALL PRIVILEGES ON DATABASE budgie_dev TO budgie_user;
 ALTER USER budgie_user CREATEDB;
 EOF
+else
+    # Linux - use postgres user
+    sudo -u postgres psql << EOF || print_warning "Database creation failed - may already exist"
+CREATE USER budgie_user WITH PASSWORD 'budgie_dev_password';
+CREATE DATABASE budgie_dev OWNER budgie_user;
+GRANT ALL PRIVILEGES ON DATABASE budgie_dev TO budgie_user;
+ALTER USER budgie_user CREATEDB;
+EOF
+fi
 
 # Create database directory structure
 print_status "Creating project structure..."

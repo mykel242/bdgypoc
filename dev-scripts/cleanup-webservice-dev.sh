@@ -132,10 +132,21 @@ print_status "Cleaning up development database..."
 # Check if PostgreSQL is running
 if pgrep -x "postgres" > /dev/null; then
     # Drop database and user
-    sudo -u postgres psql << EOF || print_warning "Database cleanup failed - may not exist"
+    print_status "Cleaning up development database..."
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        psql postgres << EOF || print_warning "Database cleanup failed - may not exist"
 DROP DATABASE IF EXISTS budgie_dev;
 DROP USER IF EXISTS budgie_user;
 EOF
+    else
+        # Linux
+        sudo -u postgres psql << EOF || print_warning "Database cleanup failed - may not exist"
+DROP DATABASE IF EXISTS budgie_dev;
+DROP USER IF EXISTS budgie_user;
+EOF
+    fi
     print_status "Removed development database and user"
 else
     print_warning "PostgreSQL not running - skipping database cleanup"
