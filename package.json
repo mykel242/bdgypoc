@@ -2,7 +2,6 @@
   "name": "budgie-webservice",
   "version": "2.0.0",
   "description": "Budgie personal finance web service",
-  "main": "index.js",
   "scripts": {
     "start": "node backend/server.js",
     "dev": "bash scripts/dev.sh",
