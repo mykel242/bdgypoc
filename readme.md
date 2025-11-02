@@ -1,102 +1,98 @@
-# Budgie: Personal Finance Ledger Application
+# Budgie Web Service
 
-Budgie is a client-side web application for personal finance tracking that allows users to manage multiple ledgers, record financial transactions, and track balances. The application uses a table-based UI to represent financial transactions in a traditional ledger format.
+Personal finance ledger application with SvelteKit frontend and Express/PostgreSQL backend.
 
-## Application Overview
+## Quick Start (Clean Environment)
 
-### Core Features
-- Multiple ledger management (create, rename, delete, import/export)
-- Transaction tracking with credit and debit entries
-- Starting balance management
-- Balance calculation and real-time updates
-- Transaction sorting/reordering via drag-and-drop
-- Paid and cleared status tracking for transactions
-- Print functionality for ledger reports
+### Prerequisites
+- Node.js v24.11.0 (use nvm)
+- PostgreSQL installed and running
+- macOS or Linux
 
-### Architecture and Organization
+### Setup from Scratch
 
-The application follows a modular architecture with distinct responsibilities split across different JavaScript files. It uses browser localStorage for data persistence and modern JavaScript features for UI interactions.
+```bash
+# 1. Clone repository (or navigate to project)
+cd /Users/mykel/Development/budgie
 
-## Code Organization
+# 2. Use correct Node.js version
+nvm use
+# If Node v24.11.0 not installed:
+# nvm install --lts
+# nvm use
 
-### Core Modules
+# 3. Run setup script (does EVERYTHING automatically)
+bash dev-scripts/setup-webservice-dev.sh
+```
 
-1. **Transaction Manager** (`transaction-manager.js`)
-   - Core data management service
-   - Handles localStorage operations for all application data
-   - Manages multiple ledger operations (CRUD)
-   - Transaction operations (add, update, delete, reorder)
-   - Import/export functionality
+**The setup script will:**
+- ✅ Check Node.js version (fails if wrong version)
+- ✅ Install all backend dependencies
+- ✅ Create SvelteKit frontend with TypeScript
+- ✅ Install Tailwind CSS v4 with Vite plugin
+- ✅ Configure Tailwind (app.css, vite.config.ts, layout)
+- ✅ Create PostgreSQL database and user
+- ✅ Run database migrations (create tables)
+- ✅ Create environment files (.env)
+- ✅ Create development scripts
+- ✅ Update package.json
 
-2. **Ledger Controller** (`ledger-controller.js`)
-   - Main controller for transaction table operations
-   - Event handling for user interactions
-   - Balance calculation and display
-   - Input validation and formatting
-   - Visual cues for transaction status
+### Start Development
 
-3. **Ledger Renderer** (`ledger-renderer.js`)
-   - Creates and updates DOM elements for the ledger table
-   - Renders transaction rows
-   - Refreshes the ledger display when data changes
+```bash
+npm run dev
+```
 
-4. **Ledger Selection** (`ledger-selection.js`)
-   - Handles row selection UI
-   - Implements drag-and-drop functionality for reordering
-   - Visual feedback during drag operations
+This starts:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
 
-5. **Ledger Manager** (`ledger-management.js`)
-   - UI management for ledger operations
-   - Ledger selector dropdown control
-   - Import/export functionality
-   - Print functionality
+## Complete Cleanup and Restart
 
-### UI Components
+If you want to start completely fresh:
 
-1. **Main HTML Structure** (`index.html`)
-   - Defines the main application layout
-   - Contains the table structure for the ledger
-   - Includes header with ledger selection and action buttons
+```bash
+# 1. Clean everything
+bash dev-scripts/cleanup-webservice-dev.sh
+# (Type 'yes' when prompted)
 
-2. **Styling** (Multiple CSS files)
-   - `styles.css`: Base styling for the transaction table
-   - `enhanced-styles.css`: Advanced styling for transaction rows and status indicators
-   - `ledger-management-styles.css`: Styles for ledger management UI components
+# 2. Fresh setup
+nvm use
+bash dev-scripts/setup-webservice-dev.sh
 
-### Initialization Flow
+# 3. Start development
+npm run dev
+```
 
-The application follows this initialization sequence:
-1. DOM content loads, triggering script.js
-2. LedgerManager initializes first (handles ledger selection)
-3. LedgerController initializes (manages transaction display and interaction)
-4. LedgerSelection initializes (handles row selection functionality)
+## Available Commands
 
-### Data Storage Model
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start frontend and backend |
+| `npm run frontend` | Start frontend only (port 5173) |
+| `npm run backend` | Start backend only (port 3001) |
+| `npm run db:test` | Test database connection |
+| `npm run db:reset` | Reset database (cleanup + setup) |
 
-The app uses localStorage with structured key patterns to store:
-- List of all available ledgers
-- Active ledger reference
-- Transactions for each ledger
-- Starting balance for each ledger
-- Starting balance date for each ledger
+## Troubleshooting
 
-### Interactions and Event Flow
+### "Wrong Node.js version detected!"
+```bash
+nvm use
+```
 
-The application relies heavily on event listeners to respond to user actions. Key events include:
-- Input changes in transaction fields
-- Checkbox toggles for paid/cleared status
-- Selection of transactions
-- Drag-and-drop for reordering
-- Button clicks for ledger operations
+### Styling not showing up
+```bash
+# Make sure @tailwindcss/vite is installed
+cd frontend
+npm install -D @tailwindcss/vite
+cd ..
 
-### User Interface Design
+# Hard refresh browser (Cmd+Shift+R)
+```
 
-The UI is centered around a table-based ledger view with:
-- Header with ledger selection and management buttons
-- Starting balance row (editable)
-- Transaction rows with date, description, credit/debit, and status
-- Input validation and visual feedback
-- Running balance calculation
-- Totals row showing summary values
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for production deployment.
 
-This modular organization allows the application to maintain clear separation of concerns while providing a seamless user experience for managing personal finances across multiple ledgers.
+## License
+
+MIT
