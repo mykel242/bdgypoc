@@ -1,102 +1,129 @@
 const express = require('express');
-const path = require('path');
-const compression = require('compression');
+const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const session = require('express-session');
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
+require('dotenv').config();
 
-// This server is designed to be a stepping stone from static hosting to full backend
-// Currently serves static files, but ready for API routes when you migrate to Svelte/database
+const { sequelize } = require('./config/database');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Security headers (temporarily disabled for debugging)
-// app.use(helmet({
-//     contentSecurityPolicy: {
-//         directives: {
-//             defaultSrc: ["'self'"],
-//             scriptSrc: ["'self'", "'unsafe-inline'"],  // unsafe-inline needed for current inline scripts
-//             styleSrc: ["'self'", "'unsafe-inline'"],   // unsafe-inline needed for inline styles
-//             imgSrc: ["'self'", "data:"],
-//             connectSrc: ["'self'"],
-//             fontSrc: ["'self'"],
-//             objectSrc: ["'none'"],
-//             mediaSrc: ["'self'"],
-//             frameSrc: ["'none'"],
-//         },
-//     },
-//     crossOriginEmbedderPolicy: false,  // Disabled for now, can enable when fully migrated
-// }));
+// Security middleware
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable for API server
+    crossOriginEmbedderPolicy: false,
+}));
 
-// Compression for better performance
-app.use(compression());
+// CORS configuration
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+}));
 
-// Logging
-app.use(morgan('combined'));
-
-// Parse JSON bodies (for future API endpoints)
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Ensure proper MIME types are set
-express.static.mime.define({
-    'text/css': ['css'],
-    'application/javascript': ['js'],
-    'text/html': ['html']
+// Logging middleware
+app.use(morgan('dev'));
+
+// Session configuration
+const sessionStore = new SequelizeStore({
+    db: sequelize,
+    tableName: 'sessions',
+    checkExpirationInterval: 15 * 60 * 1000, // Clean up expired sessions every 15 minutes
+    expiration: 7 * 24 * 60 * 60 * 1000, // 7 days
 });
 
-// Serve static files from current directory
-app.use(express.static(path.join(__dirname), {
-    extensions: ['html'],
-    index: 'index.html',
-    dotfiles: 'ignore',
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
-    setHeaders: (res, path) => {
-        if (path.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-        } else if (path.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-        }
-    }
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    },
 }));
 
-// Health check endpoint (useful for monitoring)
+// Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
-        status: 'healthy',
+        status: 'ok',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        environment: process.env.NODE_ENV || 'development',
     });
 });
 
-// Future API routes will go here
-// app.use('/api', require('./routes/api'));
-
-// Catch-all route - serve index.html for client-side routing (preparation for SPA frameworks)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+// API routes will go here
+app.get('/api', (req, res) => {
+    res.json({
+        message: 'Budgie API Server',
+        version: '2.0.0',
+        endpoints: {
+            health: '/health',
+            auth: '/api/auth/*',
+            ledgers: '/api/ledgers/*',
+            transactions: '/api/transactions/*',
+        },
+    });
 });
 
-// Error handling middleware
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        error: 'Not Found',
+        message: `Cannot ${req.method} ${req.path}`,
+    });
+});
+
+// Error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something went wrong!');
-});
-
-// Start server
-const server = app.listen(PORT, HOST, () => {
-    console.log(`Budgie server running at http://${HOST}:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server');
-    server.close(() => {
-        console.log('HTTP server closed');
-        process.exit(0);
+    console.error('Error:', err);
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal Server Error',
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     });
 });
 
-module.exports = app;
+// Database connection and server startup
+const startServer = async () => {
+    try {
+        // Test database connection
+        await sequelize.authenticate();
+        console.log('✓ Database connection established');
+
+        // Sync session store
+        await sessionStore.sync();
+        console.log('✓ Session store synchronized');
+
+        // Start server
+        app.listen(PORT, HOST, () => {
+            console.log(`\n🚀 Budgie API Server running`);
+            console.log(`   - URL: http://${HOST}:${PORT}`);
+            console.log(`   - Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`   - Database: ${process.env.DB_NAME}`);
+            console.log(`   - Frontend: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+            console.log(`\n✓ Ready to accept requests\n`);
+        });
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+// Handle shutdown gracefully
+process.on('SIGINT', async () => {
+    console.log('\n\nShutting down gracefully...');
+    await sequelize.close();
+    console.log('Database connection closed');
+    process.exit(0);
+});
+
+startServer();
