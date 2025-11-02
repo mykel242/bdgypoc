@@ -39,11 +39,22 @@ if [ ! -f "package.json" ] || [ ! -d ".git" ]; then
     print_error "Please run this script from the budgie project root directory"
 fi
 
-# Check for .nvmrc and recommend using it
+# Check for .nvmrc and require correct Node version
 if [ -f ".nvmrc" ]; then
     NVMRC_VERSION=$(cat .nvmrc)
-    print_info "Found .nvmrc with Node.js v${NVMRC_VERSION}"
-    print_info "If using nvm, run: nvm use"
+    CURRENT_VERSION=$(node --version | cut -d 'v' -f 2)
+
+    if [ "$CURRENT_VERSION" != "$NVMRC_VERSION" ]; then
+        print_error "Wrong Node.js version detected!"
+        echo
+        echo "  Required: v${NVMRC_VERSION} (from .nvmrc)"
+        echo "  Current:  v${CURRENT_VERSION}"
+        echo
+        print_info "Run this command first, then try again:"
+        echo "  nvm use"
+        echo
+        exit 1
+    fi
 fi
 
 # Check Node.js version
@@ -54,8 +65,13 @@ fi
 
 # SvelteKit requires Node 20.19+, 22.12+, or 24+
 if [ "$NODE_VERSION" -eq 20 ] || [ "$NODE_VERSION" -eq 21 ] || [ "$NODE_VERSION" -eq 23 ]; then
-    print_warning "SvelteKit requires Node ^20.19, ^22.12, or >=24. Current: $(node --version)"
-    print_warning "Recommended: Install Node 24 LTS with 'nvm install --lts'"
+    print_error "SvelteKit requires Node ^20.19, ^22.12, or >=24. Current: $(node --version)"
+    echo
+    print_info "Run these commands:"
+    echo "  nvm install --lts"
+    echo "  nvm use"
+    echo
+    exit 1
 fi
 
 print_status "Node.js version: $(node --version)"
@@ -93,18 +109,30 @@ if [ ! -d "frontend" ]; then
     print_status "Installing frontend dependencies..."
     npm install
 
-    # Add additional frontend dependencies
+    # Add additional frontend dependencies including Tailwind CSS v4
     npm install -D \
         @tailwindcss/typography \
+        @tailwindcss/vite \
         tailwindcss \
         postcss \
         autoprefixer \
         @types/node
 
     # Set up Tailwind CSS v4 (no config file needed)
-    print_status "Setting up Tailwind CSS..."
+    print_status "Setting up Tailwind CSS v4..."
     cat > src/app.css << 'EOF'
 @import "tailwindcss";
+EOF
+
+    # Update vite.config.ts to include Tailwind plugin
+    cat > vite.config.ts << 'EOF'
+import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+	plugins: [sveltekit(), tailwindcss()]
+});
 EOF
 
     # Update layout to import CSS
