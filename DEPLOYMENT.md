@@ -1,72 +1,102 @@
-# Self-Hosted Deployment Instructions
+# Budgie Web Service - Deployment Guide
 
-## Quick Start
+## Development Environment (macOS)
 
-1. Clone or copy the repository to your Linux server
-2. Navigate to the project directory
-3. Start a simple HTTP server:
-
-### Option 1: Python (Recommended for testing)
+### Initial Setup
 ```bash
-python3 -m http.server 8000
+# 1. Use correct Node.js version
+nvm use
+
+# 2. Run setup script
+bash dev-scripts/setup-webservice-dev.sh
 ```
 
-### Option 2: Node.js http-server
+### Daily Development
 ```bash
-npx http-server -p 8000
+# Start both frontend and backend
+npm run dev
+
+# Or start separately:
+npm run frontend  # Port 5173
+npm run backend   # Port 3001
 ```
 
-### Option 3: Nginx (Production)
-Add to your nginx configuration:
+### Complete Reset
+```bash
+# Warning: Deletes everything (database, files, dependencies)
+bash dev-scripts/cleanup-webservice-dev.sh
+
+# Then re-run setup
+bash dev-scripts/setup-webservice-dev.sh
+```
+
+### Database Only Reset
+```bash
+npm run db:reset
+```
+
+## Deployment to Cronus (Linux/Ubuntu)
+
+### Step 1: Prepare on macOS
+```bash
+# Build frontend for production
+bash dev-scripts/deploy-to-cronus.sh prepare
+
+# Commit and push
+git add .
+git commit -m "Ready for deployment"
+git push origin migrate-to-web-service
+```
+
+### Step 2: Deploy on Cronus
+```bash
+# SSH to Cronus
+ssh cronus
+
+# Navigate to project
+cd /var/www/budgie  # or your path
+
+# Pull latest code
+git pull origin migrate-to-web-service
+
+# Install and deploy
+bash dev-scripts/deploy-to-cronus.sh install
+```
+
+### Step 3: Configure Nginx
+
+Add to your nginx config:
+
 ```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    root /path/to/bdgy.poc;
-    index index.html;
+# Budgie v2 - SvelteKit Frontend
+location /budgie-v2/ {
+    alias /var/www/budgie/frontend/build/;
+    try_files $uri $uri/ /budgie-v2/index.html;
+}
 
-    location / {
-        try_files $uri $uri/ =404;
-    }
+# Budgie v2 - API Backend
+location /budgie-v2/api/ {
+    proxy_pass http://localhost:3001/api/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
 }
 ```
 
-4. Access the application at `http://your-server:8000` (or your configured port/domain)
+## Key Scripts
 
-## Migrating Data from GitHub Pages
+| Script | Purpose |
+|--------|---------|
+| `dev-scripts/setup-webservice-dev.sh` | Fresh setup (macOS & Linux compatible) |
+| `dev-scripts/cleanup-webservice-dev.sh` | Complete cleanup |
+| `dev-scripts/deploy-to-cronus.sh prepare` | Build for production (macOS) |
+| `dev-scripts/deploy-to-cronus.sh install` | Deploy on Cronus (Linux) |
+| `npm run dev` | Start development servers |
+| `npm run db:reset` | Reset database only |
+| `npm run db:test` | Test database connection |
 
-Since localStorage is domain-specific, you'll need to migrate your data:
+## Migration Path
 
-1. **On the GitHub Pages site:**
-   - Open each ledger you want to keep
-   - Click the "Export" button
-   - Save the downloaded file
-
-2. **On your self-hosted instance:**
-   - Click "Import"
-   - Select the exported file
-   - Your ledger with all transactions will be imported
-
-## File Structure
-
-All files are static and served as-is:
-- `index.html` - Main application
-- `*.js` - Application logic (no build step required)
-- `*.css` - Styles
-- `assets/` - Favicon and images
-
-## Data Storage
-
-The application stores all data in browser localStorage with these keys:
-- `budgie_ledgers` - List of all ledgers
-- `budgie_activeLedger` - Currently selected ledger
-- `budgie_${ledgerName}_transactions` - Transaction data
-- `budgie_${ledgerName}_startingBalance` - Starting balance
-- `budgie_${ledgerName}_startingBalanceDate` - Starting balance date
-
-## Security Notes
-
-- All data is stored client-side in the browser
-- No server-side processing or storage
-- Consider HTTPS for production deployments
-- Regular backups via Export feature recommended
+- Current app: `http://cronus/budgie/` (localStorage)
+- New app: `http://cronus/budgie-v2/` (database)
+- Both can run in parallel during transition
