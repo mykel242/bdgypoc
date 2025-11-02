@@ -39,12 +39,26 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Ensure proper MIME types are set
+express.static.mime.define({
+    'text/css': ['css'],
+    'application/javascript': ['js'],
+    'text/html': ['html']
+});
+
 // Serve static files from current directory
 app.use(express.static(path.join(__dirname), {
     extensions: ['html'],
     index: 'index.html',
     dotfiles: 'ignore',
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0
+    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+    setHeaders: (res, path) => {
+        if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        } else if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
 }));
 
 // Health check endpoint (useful for monitoring)
