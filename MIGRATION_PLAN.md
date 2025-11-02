@@ -146,24 +146,24 @@ CREATE TABLE transactions (
 
 ## Migration Strategy
 
-### Backward Compatibility
-1. Keep localStorage as fallback during transition
-2. Implement progressive enhancement
-3. Allow users to opt-in to web service features
+### Clean Slate Approach
+1. Build complete web service on separate branch
+2. Users continue using existing localStorage app during development
+3. Once web service is complete, provide migration path
+4. No backward compatibility complexity during development
 
 ### Data Migration
-1. Export current localStorage data
-2. User creates account on new system
-3. Import exported data to user's account
-4. Verify data integrity
-5. Switch to API-driven mode
+1. Users export data from existing localStorage app
+2. Users create account on new web service
+3. Users import exported data via migration tool
+4. Verify data integrity and switch to web service
 
 ### Deployment Strategy
-1. Deploy database changes
-2. Deploy API endpoints alongside existing app
-3. Add migration interface to existing UI
-4. Gradually replace localStorage with API calls
-5. Remove localStorage code once fully migrated
+1. Develop web service completely separate from current app
+2. Deploy web service to different URL path (e.g., `/budgie-v2/`)
+3. Test thoroughly with real data
+4. Provide migration instructions and tools
+5. Sunset old localStorage app when ready
 
 ## Security Considerations
 
@@ -230,10 +230,14 @@ CREATE TABLE transactions (
 
 ## Timeline Estimate
 
-- **Phase 1-2 (Foundation + API)**: 2-3 weeks
-- **Phase 3 (Authentication)**: 1-2 weeks
-- **Phase 4 (Migration)**: 1 week
-- **Phase 5 (Frontend)**: 2-3 weeks
-- **Phase 6 (Enhancements)**: Ongoing
+With clean slate approach (no backward compatibility):
 
-**Total: 6-9 weeks for core migration**
+- **Phase 1-2 (Foundation + API)**: 1-2 weeks
+- **Phase 3 (Authentication)**: 1 week
+- **Phase 4 (Migration Tools)**: 3-4 days
+- **Phase 5 (Frontend)**: 1-2 weeks
+- **Phase 6 (Testing & Polish)**: 1 week
+
+**Total: 4-6 weeks for complete web service**
+
+Much faster without backward compatibility complexity!
