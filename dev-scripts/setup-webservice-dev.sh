@@ -313,6 +313,22 @@ EOF
 
 chmod +x scripts/*.sh
 
+# Create nodemon configuration
+cat > nodemon.json << 'EOF'
+{
+  "watch": ["backend"],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "frontend",
+    ".git",
+    "*.test.js",
+    "*.spec.js"
+  ],
+  "delay": "1000"
+}
+EOF
+
 # Update package.json scripts
 cat > package.json << EOF
 {
