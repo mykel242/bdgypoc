@@ -67,15 +67,14 @@ if [ -d "frontend" ]; then
     rm -rf frontend
 fi
 
-# Remove backend directory (but preserve original files)
+# Clean backend directory (preserve git-tracked files, remove only generated/untracked)
 if [ -d "backend" ]; then
-    print_status "Cleaning backend directory..."
-    if [ -f "backend/server.js" ] && [ ! -f "server.js" ]; then
-        # Move server.js back to root if it was moved
-        mv backend/server.js ./
-        print_status "Restored server.js to root"
-    fi
-    rm -rf backend
+    print_status "Cleaning backend directory (preserving git-tracked files)..."
+    # Don't delete the entire backend directory - it contains committed source code
+    # Just remove any generated files or temp files if needed
+    rm -rf backend/node_modules 2>/dev/null || true
+    rm -f backend/*.log 2>/dev/null || true
+    print_status "Cleaned backend temporary files (source code preserved)"
 fi
 
 # Remove generated directories

@@ -308,13 +308,16 @@ fi
 
 # Create database directory structure
 print_status "Creating project structure..."
-mkdir -p {backend,database/{migrations,seeds},scripts}
+mkdir -p database/{migrations,seeds}
+mkdir -p scripts
 
-# Move existing backend files
-if [ -f "server.js" ]; then
-    mv server.js backend/
-    print_status "Moved server.js to backend/"
+# Backend directory should already exist from git with all API code
+if [ ! -d "backend" ]; then
+    print_error "Backend directory not found! This shouldn't happen."
+    print_info "The backend/ directory should exist from git with API code."
+    exit 1
 fi
+print_status "Backend API code verified (from git)"
 
 # Create database migration setup
 cat > database/setup.sql << EOF
