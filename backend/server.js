@@ -52,6 +52,11 @@ app.use(session({
     },
 }));
 
+// Import routes
+const authRoutes = require('./routes/auth');
+const ledgerRoutes = require('./routes/ledgers');
+const transactionRoutes = require('./routes/transactions');
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
@@ -61,19 +66,45 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API routes will go here
+// API documentation endpoint
 app.get('/api', (req, res) => {
     res.json({
         message: 'Budgie API Server',
         version: '2.0.0',
         endpoints: {
             health: '/health',
-            auth: '/api/auth/*',
-            ledgers: '/api/ledgers/*',
-            transactions: '/api/transactions/*',
+            auth: {
+                register: 'POST /api/auth/register',
+                login: 'POST /api/auth/login',
+                logout: 'POST /api/auth/logout',
+                me: 'GET /api/auth/me',
+                check: 'GET /api/auth/check',
+            },
+            ledgers: {
+                list: 'GET /api/ledgers',
+                get: 'GET /api/ledgers/:id',
+                create: 'POST /api/ledgers',
+                update: 'PUT /api/ledgers/:id',
+                delete: 'DELETE /api/ledgers/:id',
+                balance: 'GET /api/ledgers/:id/balance',
+            },
+            transactions: {
+                list: 'GET /api/transactions',
+                get: 'GET /api/transactions/:id',
+                create: 'POST /api/transactions',
+                update: 'PUT /api/transactions/:id',
+                delete: 'DELETE /api/transactions/:id',
+                togglePaid: 'POST /api/transactions/:id/toggle-paid',
+                toggleCleared: 'POST /api/transactions/:id/toggle-cleared',
+            },
         },
     });
 });
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/ledgers', ledgerRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // 404 handler
 app.use((req, res) => {
