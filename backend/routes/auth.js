@@ -7,17 +7,23 @@ const router = express.Router();
 
 // Validation middleware
 const registerValidation = [
-	body('username')
-		.trim()
-		.isLength({ min: 3, max: 50 })
-		.withMessage('Username must be between 3 and 50 characters')
-		.matches(/^[a-zA-Z0-9_-]+$/)
-		.withMessage('Username can only contain letters, numbers, underscores, and hyphens'),
 	body('email')
 		.trim()
 		.isEmail()
 		.normalizeEmail()
 		.withMessage('Must be a valid email address'),
+	body('first_name')
+		.trim()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('First name is required and must be less than 100 characters')
+		.notEmpty()
+		.withMessage('First name is required'),
+	body('last_name')
+		.trim()
+		.isLength({ min: 1, max: 100 })
+		.withMessage('Last name is required and must be less than 100 characters')
+		.notEmpty()
+		.withMessage('Last name is required'),
 	body('password')
 		.isLength({ min: 8 })
 		.withMessage('Password must be at least 8 characters long')
@@ -30,10 +36,12 @@ const registerValidation = [
 ];
 
 const loginValidation = [
-	body('username')
+	body('email')
 		.trim()
+		.isEmail()
+		.withMessage('Must be a valid email address')
 		.notEmpty()
-		.withMessage('Username is required'),
+		.withMessage('Email is required'),
 	body('password')
 		.notEmpty()
 		.withMessage('Password is required'),
@@ -51,44 +59,42 @@ router.post('/register', registerValidation, async (req, res) => {
 			});
 		}
 
-		const { username, email, password } = req.body;
+		const { email, first_name, last_name, password } = req.body;
 
-		// Check if user already exists
+		// Check if email already exists
 		const existingUser = await User.findOne({
-			where: {
-				[require('sequelize').Op.or]: [
-					{ username },
-					{ email },
-				],
-			},
+			where: { email },
 		});
 
 		if (existingUser) {
 			return res.status(409).json({
 				error: 'User already exists',
-				message: existingUser.username === username
-					? 'Username is already taken'
-					: 'Email is already registered',
+				message: 'Email is already registered',
+				details: [{ param: 'email', msg: 'Email is already registered' }],
 			});
 		}
 
 		// Create new user (password will be hashed by the model hook)
 		const user = await User.create({
-			username,
 			email,
+			first_name,
+			last_name,
 			password_hash: password, // Will be hashed by beforeCreate hook
 		});
 
 		// Set up session
 		req.session.userId = user.id;
-		req.session.username = user.username;
+		req.session.userUuid = user.uuid;
+		req.session.userEmail = user.email;
 
 		res.status(201).json({
 			message: 'User registered successfully',
 			user: {
 				id: user.id,
-				username: user.username,
+				uuid: user.uuid,
 				email: user.email,
+				first_name: user.first_name,
+				last_name: user.last_name,
 			},
 		});
 	} catch (error) {
@@ -112,15 +118,15 @@ router.post('/login', loginValidation, async (req, res) => {
 			});
 		}
 
-		const { username, password } = req.body;
+		const { email, password } = req.body;
 
 		// Find user
-		const user = await User.findOne({ where: { username } });
+		const user = await User.findOne({ where: { email } });
 
 		if (!user) {
 			return res.status(401).json({
 				error: 'Authentication failed',
-				message: 'Invalid username or password',
+				message: 'Invalid email or password',
 			});
 		}
 
@@ -130,20 +136,23 @@ router.post('/login', loginValidation, async (req, res) => {
 		if (!isValid) {
 			return res.status(401).json({
 				error: 'Authentication failed',
-				message: 'Invalid username or password',
+				message: 'Invalid email or password',
 			});
 		}
 
 		// Set up session
 		req.session.userId = user.id;
-		req.session.username = user.username;
+		req.session.userUuid = user.uuid;
+		req.session.userEmail = user.email;
 
 		res.json({
 			message: 'Login successful',
 			user: {
 				id: user.id,
-				username: user.username,
+				uuid: user.uuid,
 				email: user.email,
+				first_name: user.first_name,
+				last_name: user.last_name,
 			},
 		});
 	} catch (error) {
@@ -188,8 +197,10 @@ router.get('/me', requireAuth, async (req, res) => {
 		res.json({
 			user: {
 				id: user.id,
-				username: user.username,
+				uuid: user.uuid,
 				email: user.email,
+				first_name: user.first_name,
+				last_name: user.last_name,
 				created_at: user.created_at,
 			},
 		});
@@ -208,7 +219,8 @@ router.get('/check', (req, res) => {
 		res.json({
 			authenticated: true,
 			userId: req.session.userId,
-			username: req.session.username,
+			userUuid: req.session.userUuid,
+			userEmail: req.session.userEmail,
 		});
 	} else {
 		res.json({

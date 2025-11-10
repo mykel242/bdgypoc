@@ -130,6 +130,10 @@ const startServer = async () => {
         await sequelize.authenticate();
         console.log('✓ Database connection established');
 
+        // Sync models (create tables if they don't exist)
+        await sequelize.sync();
+        console.log('✓ Database models synchronized');
+
         // Sync session store
         await sessionStore.sync();
         console.log('✓ Session store synchronized');

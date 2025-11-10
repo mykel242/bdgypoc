@@ -1,18 +1,56 @@
 <script lang="ts">
-	// This is the landing page for Budgie Web Service
+	import { authStore } from '$lib/stores/auth';
+
+	async function handleLogout() {
+		await authStore.logout();
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
 	<div class="max-w-2xl w-full">
 		<div class="bg-white rounded-lg shadow-xl p-8">
+			<!-- Header -->
 			<div class="text-center mb-8">
 				<h1 class="text-4xl font-bold text-gray-900 mb-2">
 					Welcome to Budgie
 				</h1>
-				<p class="text-xl text-gray-600">
-					Your Personal Finance Ledger
-				</p>
+				{#if $authStore.isAuthenticated && $authStore.user}
+					<p class="text-xl text-gray-600">
+						Hello, <span class="font-semibold text-blue-600">{$authStore.user.first_name}</span>!
+					</p>
+				{:else}
+					<p class="text-xl text-gray-600">
+						Your Personal Finance Ledger
+					</p>
+				{/if}
 			</div>
+
+			<!-- Authentication Actions -->
+			{#if $authStore.isAuthenticated}
+				<div class="mb-6 flex justify-center gap-3">
+					<button
+						on:click={handleLogout}
+						class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+					>
+						Log Out
+					</button>
+				</div>
+			{:else if !$authStore.isLoading}
+				<div class="mb-6 flex justify-center gap-3">
+					<a
+						href="/login"
+						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+					>
+						Log In
+					</a>
+					<a
+						href="/register"
+						class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+					>
+						Sign Up
+					</a>
+				</div>
+			{/if}
 
 			<div class="space-y-6">
 				<div class="bg-blue-50 border-l-4 border-blue-500 p-4">
