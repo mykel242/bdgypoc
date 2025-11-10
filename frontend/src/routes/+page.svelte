@@ -28,6 +28,12 @@
 			<!-- Authentication Actions -->
 			{#if $authStore.isAuthenticated}
 				<div class="mb-6 flex justify-center gap-3">
+					<a
+						href="/ledgers"
+						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+					>
+						My Ledgers
+					</a>
 					<button
 						on:click={handleLogout}
 						class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"

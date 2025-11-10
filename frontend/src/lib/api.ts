@@ -147,6 +147,128 @@ export const auth = {
 };
 
 /**
+ * Ledger Interfaces
+ */
+export interface Ledger {
+  id: number;
+  user_id: number;
+  name: string;
+  starting_balance: number;
+  starting_balance_date: string | null;
+  is_locked: boolean;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+  transaction_count?: number;
+}
+
+export interface LedgerListResponse {
+  ledgers: Ledger[];
+  count: number;
+}
+
+export interface LedgerResponse {
+  message: string;
+  ledger: Ledger;
+}
+
+export interface LedgerBalanceResponse {
+  ledger_id: number;
+  ledger_name: string;
+  starting_balance: number;
+  current_balance: number;
+  cleared_balance: number;
+  transaction_count: number;
+}
+
+/**
+ * Ledger API
+ */
+export const ledgers = {
+  /**
+   * Get all ledgers for current user
+   */
+  async list(includeArchived: boolean = false): Promise<LedgerListResponse> {
+    const response = await apiFetch<LedgerListResponse>("/api/ledgers");
+
+    // Filter out archived ledgers if requested
+    if (!includeArchived) {
+      return {
+        ledgers: response.ledgers.filter(l => !l.is_archived),
+        count: response.ledgers.filter(l => !l.is_archived).length,
+      };
+    }
+
+    return response;
+  },
+
+  /**
+   * Get a specific ledger
+   */
+  async get(id: number): Promise<{ ledger: Ledger }> {
+    return apiFetch<{ ledger: Ledger }>(`/api/ledgers/${id}`);
+  },
+
+  /**
+   * Create a new ledger
+   */
+  async create(data: {
+    name: string;
+    starting_balance?: number;
+    starting_balance_date?: string;
+  }): Promise<LedgerResponse> {
+    return apiFetch<LedgerResponse>("/api/ledgers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Update a ledger
+   */
+  async update(
+    id: number,
+    data: {
+      name?: string;
+      starting_balance?: number;
+      starting_balance_date?: string;
+      is_locked?: boolean;
+      is_archived?: boolean;
+    },
+  ): Promise<LedgerResponse> {
+    return apiFetch<LedgerResponse>(`/api/ledgers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete a ledger
+   */
+  async delete(id: number): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>(`/api/ledgers/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * Get balance for a ledger
+   */
+  async getBalance(id: number): Promise<LedgerBalanceResponse> {
+    return apiFetch<LedgerBalanceResponse>(`/api/ledgers/${id}/balance`);
+  },
+
+  /**
+   * Copy a ledger with all its transactions
+   */
+  async copy(id: number): Promise<LedgerResponse> {
+    return apiFetch<LedgerResponse>(`/api/ledgers/${id}/copy`, {
+      method: "POST",
+    });
+  },
+};
+
+/**
  * Export ApiError for error handling
  */
 export { ApiError };

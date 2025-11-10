@@ -34,6 +34,16 @@ const Ledger = sequelize.define('Ledger', {
 		type: DataTypes.DATEONLY,
 		allowNull: true,
 	},
+	is_locked: {
+		type: DataTypes.BOOLEAN,
+		defaultValue: false,
+		allowNull: false,
+	},
+	is_archived: {
+		type: DataTypes.BOOLEAN,
+		defaultValue: false,
+		allowNull: false,
+	},
 }, {
 	tableName: 'ledgers',
 	timestamps: true,

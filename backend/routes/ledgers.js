@@ -45,6 +45,14 @@ const updateLedgerValidation = [
 		.optional()
 		.isISO8601()
 		.withMessage('Starting balance date must be a valid date'),
+	body('is_locked')
+		.optional()
+		.isBoolean()
+		.withMessage('is_locked must be a boolean'),
+	body('is_archived')
+		.optional()
+		.isBoolean()
+		.withMessage('is_archived must be a boolean'),
 ];
 
 const ledgerIdValidation = [
@@ -200,7 +208,15 @@ router.put('/:id', updateLedgerValidation, async (req, res) => {
 			});
 		}
 
-		const { name, starting_balance, starting_balance_date } = req.body;
+		const { name, starting_balance, starting_balance_date, is_locked, is_archived } = req.body;
+
+		// Check if ledger is locked and user is trying to change restricted fields
+		if (ledger.is_locked && (name !== undefined || starting_balance !== undefined || starting_balance_date !== undefined)) {
+			return res.status(403).json({
+				error: 'Forbidden',
+				message: 'Cannot modify a locked ledger. Please unlock it first.',
+			});
+		}
 
 		// If name is being changed, check for conflicts
 		if (name && name !== ledger.name) {
@@ -223,6 +239,8 @@ router.put('/:id', updateLedgerValidation, async (req, res) => {
 		if (name !== undefined) ledger.name = name;
 		if (starting_balance !== undefined) ledger.starting_balance = starting_balance;
 		if (starting_balance_date !== undefined) ledger.starting_balance_date = starting_balance_date;
+		if (is_locked !== undefined) ledger.is_locked = is_locked;
+		if (is_archived !== undefined) ledger.is_archived = is_archived;
 
 		await ledger.save();
 
@@ -261,6 +279,14 @@ router.delete('/:id', ledgerIdValidation, async (req, res) => {
 			return res.status(404).json({
 				error: 'Not found',
 				message: 'Ledger not found or you do not have access to it',
+			});
+		}
+
+		// Check if ledger is locked
+		if (ledger.is_locked) {
+			return res.status(403).json({
+				error: 'Forbidden',
+				message: 'Cannot delete a locked ledger. Please unlock it first.',
 			});
 		}
 
@@ -342,6 +368,105 @@ router.get('/:id/balance', ledgerIdValidation, async (req, res) => {
 		res.status(500).json({
 			error: 'Internal server error',
 			message: 'Failed to calculate balance',
+		});
+	}
+});
+
+// POST /api/ledgers/:id/copy - Copy a ledger with all its transactions
+router.post('/:id/copy', ledgerIdValidation, async (req, res) => {
+	try {
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(400).json({
+				error: 'Validation failed',
+				details: errors.array(),
+			});
+		}
+
+		// Find the original ledger with all its transactions
+		const originalLedger = await Ledger.findOne({
+			where: {
+				id: req.params.id,
+				user_id: req.session.userId,
+			},
+			include: [{
+				model: Transaction,
+				as: 'transactions',
+			}],
+		});
+
+		if (!originalLedger) {
+			return res.status(404).json({
+				error: 'Not found',
+				message: 'Ledger not found or you do not have access to it',
+			});
+		}
+
+		// Generate a unique name for the copy
+		let copyName = `${originalLedger.name} (Copy)`;
+		let counter = 1;
+
+		// Check if a ledger with this name already exists
+		while (await Ledger.findOne({
+			where: {
+				user_id: req.session.userId,
+				name: copyName,
+			},
+		})) {
+			counter++;
+			copyName = `${originalLedger.name} (Copy ${counter})`;
+		}
+
+		// Create the new ledger
+		const newLedger = await Ledger.create({
+			user_id: req.session.userId,
+			name: copyName,
+			starting_balance: originalLedger.starting_balance,
+			starting_balance_date: originalLedger.starting_balance_date,
+			is_locked: false, // New copy should be unlocked
+			is_archived: false, // New copy should not be archived
+		});
+
+		// Copy all transactions if they exist
+		if (originalLedger.transactions && originalLedger.transactions.length > 0) {
+			const transactionCopies = originalLedger.transactions.map(tx => ({
+				ledger_id: newLedger.id,
+				date: tx.date,
+				payee: tx.payee,
+				description: tx.description,
+				credit_amount: tx.credit_amount,
+				debit_amount: tx.debit_amount,
+				is_cleared: tx.is_cleared,
+				is_paid: tx.is_paid,
+				sort_order: tx.sort_order,
+			}));
+
+			await Transaction.bulkCreate(transactionCopies);
+		}
+
+		// Fetch the new ledger with transaction count
+		const ledgerWithTransactions = await Ledger.findOne({
+			where: { id: newLedger.id },
+			include: [{
+				model: Transaction,
+				as: 'transactions',
+				attributes: ['id'],
+			}],
+		});
+
+		res.status(201).json({
+			message: 'Ledger copied successfully',
+			ledger: {
+				...ledgerWithTransactions.toJSON(),
+				transaction_count: ledgerWithTransactions.transactions ? ledgerWithTransactions.transactions.length : 0,
+				transactions: undefined,
+			},
+		});
+	} catch (error) {
+		console.error('Copy ledger error:', error);
+		res.status(500).json({
+			error: 'Internal server error',
+			message: 'Failed to copy ledger',
 		});
 	}
 });
