@@ -160,6 +160,7 @@ export interface Ledger {
   created_at: string;
   updated_at: string;
   transaction_count?: number;
+  current_balance?: number;
 }
 
 export interface LedgerListResponse {
@@ -263,6 +264,119 @@ export const ledgers = {
    */
   async copy(id: number): Promise<LedgerResponse> {
     return apiFetch<LedgerResponse>(`/api/ledgers/${id}/copy`, {
+      method: "POST",
+    });
+  },
+};
+
+/**
+ * Transaction Interfaces
+ */
+export interface Transaction {
+  id: number;
+  ledger_id: number;
+  date: string;
+  description: string;
+  credit_amount: number;
+  debit_amount: number;
+  is_paid: boolean;
+  is_cleared: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransactionListResponse {
+  transactions: Transaction[];
+  count: number;
+}
+
+export interface TransactionResponse {
+  message: string;
+  transaction: Transaction;
+}
+
+/**
+ * Transaction API
+ */
+export const transactions = {
+  /**
+   * Get all transactions for a ledger
+   */
+  async list(ledgerId: number): Promise<TransactionListResponse> {
+    return apiFetch<TransactionListResponse>(`/api/transactions?ledger_id=${ledgerId}`);
+  },
+
+  /**
+   * Get a specific transaction
+   */
+  async get(id: number): Promise<{ transaction: Transaction }> {
+    return apiFetch<{ transaction: Transaction }>(`/api/transactions/${id}`);
+  },
+
+  /**
+   * Create a new transaction
+   */
+  async create(data: {
+    ledger_id: number;
+    date: string;
+    description: string;
+    credit_amount?: number;
+    debit_amount?: number;
+    is_paid?: boolean;
+    is_cleared?: boolean;
+    sort_order?: number;
+  }): Promise<TransactionResponse> {
+    return apiFetch<TransactionResponse>("/api/transactions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Update a transaction
+   */
+  async update(
+    id: number,
+    data: {
+      date?: string;
+      description?: string;
+      credit_amount?: number;
+      debit_amount?: number;
+      is_paid?: boolean;
+      is_cleared?: boolean;
+      sort_order?: number;
+    },
+  ): Promise<TransactionResponse> {
+    return apiFetch<TransactionResponse>(`/api/transactions/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete a transaction
+   */
+  async delete(id: number): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>(`/api/transactions/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * Toggle paid status
+   */
+  async togglePaid(id: number): Promise<TransactionResponse> {
+    return apiFetch<TransactionResponse>(`/api/transactions/${id}/toggle-paid`, {
+      method: "POST",
+    });
+  },
+
+  /**
+   * Toggle cleared status
+   */
+  async toggleCleared(id: number): Promise<TransactionResponse> {
+    return apiFetch<TransactionResponse>(`/api/transactions/${id}/toggle-cleared`, {
       method: "POST",
     });
   },

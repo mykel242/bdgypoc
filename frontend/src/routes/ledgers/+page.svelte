@@ -177,8 +177,8 @@
 			<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 				{#each $ledgerStore.ledgers as ledger (ledger.id)}
 					<div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-						<!-- Ledger Header -->
-						<div class="p-6 border-b border-gray-200">
+						<!-- Ledger Header (Clickable) -->
+						<a href="/ledgers/{ledger.id}" class="block p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors">
 							<div class="flex items-start justify-between mb-2">
 								<h3 class="text-xl font-bold text-gray-900 flex-1 mr-2">
 									{ledger.name}
@@ -202,12 +202,12 @@
 								</div>
 							</div>
 							<p class="text-2xl font-bold text-blue-600">
-								{formatCurrency(ledger.starting_balance)}
+								{formatCurrency(ledger.current_balance ?? ledger.starting_balance)}
 							</p>
 							<p class="text-sm text-gray-500 mt-1">
 								{ledger.transaction_count || 0} transaction{ledger.transaction_count === 1 ? '' : 's'}
 							</p>
-						</div>
+						</a>
 
 						<!-- Actions -->
 						<div class="p-4 bg-gray-50 flex flex-wrap gap-2">

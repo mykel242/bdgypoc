@@ -70,16 +70,31 @@ router.get('/', async (req, res) => {
 			include: [{
 				model: Transaction,
 				as: 'transactions',
-				attributes: ['id'],
+				attributes: ['id', 'credit_amount', 'debit_amount'],
 			}],
 		});
 
-		// Add transaction count to each ledger
-		const ledgersWithCount = ledgers.map(ledger => ({
-			...ledger.toJSON(),
-			transaction_count: ledger.transactions ? ledger.transactions.length : 0,
-			transactions: undefined, // Remove the transactions array, keep only count
-		}));
+		// Add transaction count and current balance to each ledger
+		const ledgersWithCount = ledgers.map(ledger => {
+			const ledgerJSON = ledger.toJSON();
+			const transactionCount = ledger.transactions ? ledger.transactions.length : 0;
+
+			// Calculate current balance
+			let currentBalance = parseFloat(ledger.starting_balance) || 0;
+			if (ledger.transactions) {
+				ledger.transactions.forEach(tx => {
+					currentBalance += parseFloat(tx.credit_amount) || 0;
+					currentBalance -= parseFloat(tx.debit_amount) || 0;
+				});
+			}
+
+			return {
+				...ledgerJSON,
+				transaction_count: transactionCount,
+				current_balance: parseFloat(currentBalance.toFixed(2)),
+				transactions: undefined, // Remove the transactions array
+			};
+		});
 
 		res.json({
 			ledgers: ledgersWithCount,
@@ -432,7 +447,6 @@ router.post('/:id/copy', ledgerIdValidation, async (req, res) => {
 			const transactionCopies = originalLedger.transactions.map(tx => ({
 				ledger_id: newLedger.id,
 				date: tx.date,
-				payee: tx.payee,
 				description: tx.description,
 				credit_amount: tx.credit_amount,
 				debit_amount: tx.debit_amount,
