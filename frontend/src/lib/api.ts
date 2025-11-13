@@ -3,7 +3,12 @@
  * Handles all HTTP requests to the Express API
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { base } from '$app/paths';
+
+// In production (built app), use relative URL through nginx
+// In development, use localhost directly
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.MODE === 'production' ? base : "http://localhost:3001");
 
 export interface User {
   id: number;
