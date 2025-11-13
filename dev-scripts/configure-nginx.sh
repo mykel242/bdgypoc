@@ -46,11 +46,17 @@ fi
 
 # Check if running as root or with sudo
 if [ "$EUID" -ne 0 ]; then
-    print_error "Please run with sudo: sudo bash $0"
+    print_error "Please run with sudo: sudo bash $0 [project_dir]"
 fi
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+# Get project directory from argument or detect from script location
+if [ -n "$1" ] && [ -d "$1" ]; then
+    PROJECT_DIR="$1"
+else
+    SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+fi
+
 NGINX_CONF="$PROJECT_DIR/deploy/nginx-v2.conf"
 
 # Check if frontend build exists

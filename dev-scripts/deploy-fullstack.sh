@@ -85,17 +85,20 @@ echo
 if [ "$CONFIGURE_NGINX" = true ]; then
     print_info "Step 3: Configuring nginx..."
 
+    # Get absolute project directory
+    PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+
     # Check if running as root
     if [ "$EUID" -eq 0 ]; then
-        bash "$SCRIPT_DIR/configure-nginx.sh"
+        bash "$SCRIPT_DIR/configure-nginx.sh" "$PROJECT_DIR"
     else
         print_warning "nginx configuration requires sudo..."
-        sudo bash "$SCRIPT_DIR/configure-nginx.sh"
+        sudo bash "$SCRIPT_DIR/configure-nginx.sh" "$PROJECT_DIR"
     fi
 else
     print_warning "Skipping nginx configuration (use --nginx to configure)"
     print_info "To configure nginx later, run:"
-    echo "  sudo bash dev-scripts/configure-nginx.sh"
+    echo "  sudo bash dev-scripts/configure-nginx.sh \$(pwd)"
 fi
 
 echo
