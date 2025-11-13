@@ -121,6 +121,33 @@ bash dev-scripts/deploy-to-cronus.sh install
 # Press Enter to use default .secrets file
 ```
 
+### Clean Deployment (Start Fresh)
+
+To completely remove everything and redeploy from scratch:
+
+```bash
+cd /opt/budgie
+
+# Option 1: Clean then deploy manually
+bash dev-scripts/clean-cronus.sh    # Removes everything
+bash dev-scripts/deploy-to-cronus.sh install
+
+# Option 2: Clean + Deploy in one command
+bash dev-scripts/redeploy-cronus.sh
+```
+
+The clean script removes:
+- PM2 processes
+- PostgreSQL database and user
+- node_modules (backend and frontend)
+- Built frontend files
+- Generated config files
+
+But preserves:
+- Source code (git repository)
+- .secrets file
+- Git configuration
+
 ### Step 3: Configure Nginx
 
 Add to your nginx config:
@@ -146,9 +173,11 @@ location /budgie-v2/api/ {
 | Script | Purpose |
 |--------|---------|
 | `dev-scripts/setup-webservice-dev.sh` | Fresh setup (macOS & Linux compatible) |
-| `dev-scripts/cleanup-webservice-dev.sh` | Complete cleanup |
+| `dev-scripts/cleanup-webservice-dev.sh` | Complete cleanup (development) |
 | `dev-scripts/deploy-to-cronus.sh prepare` | Build for production (macOS) |
 | `dev-scripts/deploy-to-cronus.sh install` | Deploy on Cronus (Linux) |
+| `dev-scripts/clean-cronus.sh` | Clean all Budgie data on Cronus |
+| `dev-scripts/redeploy-cronus.sh` | Clean + Deploy in one command |
 | `npm run dev` | Start development servers |
 | `npm run db:reset` | Reset database only |
 | `npm run db:test` | Test database connection |
