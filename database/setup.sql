@@ -41,15 +41,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Sessions table (for express-session)
-CREATE TABLE IF NOT EXISTS sessions (
-    sid VARCHAR NOT NULL COLLATE "default",
-    sess JSON NOT NULL,
-    expire TIMESTAMP(6) NOT NULL
-) WITH (OIDS=FALSE);
-
-ALTER TABLE sessions ADD CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
-CREATE INDEX IF NOT EXISTS IDX_session_expire ON sessions (expire);
+-- Sessions table is auto-created by connect-session-sequelize
+-- Do not manually create it here as the schema must match what the session store expects
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_ledgers_user_id ON ledgers(user_id);
