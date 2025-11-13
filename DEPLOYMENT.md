@@ -148,9 +148,44 @@ But preserves:
 - .secrets file
 - Git configuration
 
-### Step 3: Configure Nginx
+### Step 4: Configure Nginx
 
-Add to your nginx config:
+Once the backend is deployed, configure nginx to serve the frontend:
+
+```bash
+# On Cronus
+cd /opt/budgie
+sudo bash dev-scripts/configure-nginx.sh
+```
+
+This will:
+- Install nginx configuration to `/etc/nginx/sites-available/budgie-v2`
+- Enable the site
+- Test and reload nginx
+
+Your app will be available at:
+- Frontend: `http://cronus/budgie-v2/`
+- API (through nginx): `http://cronus/budgie-v2/api/`
+
+### Full-Stack Deployment (All-in-One)
+
+For a complete deployment in one command:
+
+```bash
+cd /opt/budgie
+
+# Option 1: Deploy backend + nginx
+bash dev-scripts/deploy-fullstack.sh --nginx
+
+# Option 2: Clean + Deploy backend + nginx
+bash dev-scripts/deploy-fullstack.sh --clean --nginx
+```
+
+### Manual Nginx Configuration
+
+If you prefer to configure nginx manually, the config file is at `deploy/nginx-v2.conf`.
+
+Add to your existing nginx config:
 
 ```nginx
 # Budgie v2 - SvelteKit Frontend
@@ -170,17 +205,24 @@ location /budgie-v2/api/ {
 
 ## Key Scripts
 
+### Development (macOS/Linux)
 | Script | Purpose |
 |--------|---------|
-| `dev-scripts/setup-webservice-dev.sh` | Fresh setup (macOS & Linux compatible) |
+| `dev-scripts/setup-webservice-dev.sh` | Fresh development setup |
 | `dev-scripts/cleanup-webservice-dev.sh` | Complete cleanup (development) |
-| `dev-scripts/deploy-to-cronus.sh prepare` | Build for production (macOS) |
-| `dev-scripts/deploy-to-cronus.sh install` | Deploy on Cronus (Linux) |
-| `dev-scripts/clean-cronus.sh` | Clean all Budgie data on Cronus |
-| `dev-scripts/redeploy-cronus.sh` | Clean + Deploy in one command |
 | `npm run dev` | Start development servers |
 | `npm run db:reset` | Reset database only |
 | `npm run db:test` | Test database connection |
+
+### Production Deployment (Cronus/Linux)
+| Script | Purpose |
+|--------|---------|
+| `dev-scripts/deploy-to-cronus.sh install` | Deploy backend only |
+| `dev-scripts/clean-cronus.sh` | Clean all Budgie data |
+| `dev-scripts/redeploy-cronus.sh` | Clean + Deploy backend |
+| `dev-scripts/configure-nginx.sh` | Configure nginx for frontend |
+| `dev-scripts/deploy-fullstack.sh` | Deploy backend + optional nginx |
+| `dev-scripts/deploy-fullstack.sh --clean --nginx` | Full clean + deploy everything |
 
 ## Migration Path
 
