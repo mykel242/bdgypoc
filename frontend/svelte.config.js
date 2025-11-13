@@ -1,6 +1,9 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
+// Use base path only for production builds
+const dev = process.env.NODE_ENV === 'development';
+
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	// Consult https://svelte.dev/docs/kit/integrations
@@ -17,9 +20,10 @@ const config = {
 			precompress: false,
 			strict: true
 		}),
-		// Set base path for serving from /budgie-v2/
+		// Set base path only for production (deployed to /budgie-v2/)
+		// In development, use no base path (serve from root)
 		paths: {
-			base: '/budgie-v2'
+			base: dev ? '' : '/budgie-v2'
 		}
 	}
 };
