@@ -18,7 +18,7 @@
 	onMount(() => {
 		const unsubscribe = authStore.subscribe(state => {
 			if (!state.isAuthenticated && !state.isLoading) {
-				goto('/login?returnUrl=/ledgers');
+				goto(`${base}/login?returnUrl=${base}/ledgers`);
 			}
 		});
 

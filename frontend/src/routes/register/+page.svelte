@@ -21,7 +21,7 @@
 	onMount(() => {
 		const unsubscribe = authStore.subscribe(state => {
 			if (state.isAuthenticated && !state.isLoading) {
-				goto('/');
+				goto(base || '/');
 			}
 		});
 		return unsubscribe;

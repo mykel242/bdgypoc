@@ -6,6 +6,7 @@
 import { writable } from 'svelte/store';
 import { auth as authApi, type User, ApiError } from '$lib/api';
 import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 
 interface AuthState {
 	user: User | null;
@@ -79,7 +80,7 @@ function createAuthStore() {
 				});
 
 				// Redirect to home
-				goto('/');
+				goto(base || '/');
 			} catch (error) {
 				const errorMessage = error instanceof ApiError
 					? error.message
@@ -143,7 +144,7 @@ function createAuthStore() {
 				});
 
 				// Redirect to login
-				goto('/login');
+				goto(`${base}/login`);
 			} catch (error) {
 				// Even if logout fails on server, clear local state
 				set({
@@ -153,7 +154,7 @@ function createAuthStore() {
 					error: null
 				});
 
-				goto('/login');
+				goto(`${base}/login`);
 			}
 		},
 
