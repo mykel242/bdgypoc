@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { authStore } from '$lib/stores/auth';
 	import { ApiError } from '$lib/api';
 	import { onMount } from 'svelte';
@@ -146,7 +147,7 @@
 			<div class="mt-6 text-center">
 				<p class="text-sm text-gray-600">
 					Don't have an account?
-					<a href="/register" class="text-blue-600 hover:text-blue-700 font-medium">
+					<a href="{base}/register" class="text-blue-600 hover:text-blue-700 font-medium">
 						Sign up
 					</a>
 				</p>

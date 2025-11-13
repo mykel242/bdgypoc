@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth';
+	import { base } from '$app/paths';
 
 	async function handleLogout() {
 		await authStore.logout();
@@ -29,7 +30,7 @@
 			{#if $authStore.isAuthenticated}
 				<div class="mb-6 flex justify-center gap-3">
 					<a
-						href="/ledgers"
+						href="{base}/ledgers"
 						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
 					>
 						My Ledgers
@@ -44,13 +45,13 @@
 			{:else if !$authStore.isLoading}
 				<div class="mb-6 flex justify-center gap-3">
 					<a
-						href="/login"
+						href="{base}/login"
 						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
 					>
 						Log In
 					</a>
 					<a
-						href="/register"
+						href="{base}/register"
 						class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
 					>
 						Sign Up
