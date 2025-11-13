@@ -14,7 +14,7 @@
 	let serverError = '';
 
 	// Get return URL from query params
-	$: returnUrl = $page.url.searchParams.get('returnUrl') || '/';
+	$: returnUrl = $page.url.searchParams.get('returnUrl') || base || '/';
 
 	// Redirect if already authenticated
 	onMount(() => {
