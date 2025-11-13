@@ -37,7 +37,31 @@ npm run db:reset
 
 ## Deployment to Cronus (Linux/Ubuntu)
 
-### Step 1: Prepare on macOS
+### Step 1: Setup Secrets (One-Time)
+
+Create a `.secrets` file with your credentials:
+
+```bash
+# Option A: Copy the bundled dev/test secrets (simple passwords)
+cp .secrets.example .secrets
+
+# Option B: Create custom secrets
+cat > .secrets <<EOF
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=budgie_production
+DB_USER=budgie_user
+DB_PASSWORD=your_secure_password_here
+SESSION_SECRET=$(openssl rand -base64 32)
+NODE_ENV=production
+PORT=3001
+FRONTEND_URL=http://cronus
+EOF
+```
+
+**Note:** The bundled `.secrets` file uses `budgie_pass` and `ABRACADABRA` for minimal friction in dev/test. Change these for real production!
+
+### Step 2: Prepare on macOS
 ```bash
 # Build frontend for production
 bash dev-scripts/deploy-to-cronus.sh prepare
@@ -48,19 +72,53 @@ git commit -m "Ready for deployment"
 git push origin migrate-to-web-service
 ```
 
-### Step 2: Deploy on Cronus
+### Step 3: Deploy on Cronus
 ```bash
 # SSH to Cronus
 ssh cronus
 
-# Navigate to project
-cd /var/www/budgie  # or your path
+# Navigate to project (or clone it first time)
+cd /opt/budgie
 
 # Pull latest code
 git pull origin migrate-to-web-service
 
-# Install and deploy
+# Copy secrets to server (one time only)
+# Either SCP from local, or create on server:
+nano .secrets  # Edit with your credentials
+
+# Run automated deployment
 bash dev-scripts/deploy-to-cronus.sh install
+```
+
+The script will prompt for secrets file path (default: `.secrets`) and then automatically:
+- Load credentials from secrets file
+- Install all dependencies (backend and frontend)
+- Build frontend for production
+- Create PostgreSQL database and user (or update if exists)
+- Apply database schema and migrations
+- Generate PM2 configuration with environment variables
+- Start/restart the application
+- Setup PM2 to start on system boot
+
+### Step 4: Verify
+```bash
+# Check PM2 status
+pm2 status
+
+# View logs
+pm2 logs budgie-api
+
+# Test API
+curl http://localhost:3001/api/auth/check
+```
+
+### Updating Existing Deployment
+```bash
+cd /opt/budgie
+git pull origin migrate-to-web-service
+bash dev-scripts/deploy-to-cronus.sh install
+# Press Enter to use default .secrets file
 ```
 
 ### Step 3: Configure Nginx

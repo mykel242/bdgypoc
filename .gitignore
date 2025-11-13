@@ -10,6 +10,7 @@ logs/
 .env
 .env.local
 .env.production
+.secrets
 
 # OS files
 .DS_Store

@@ -52,7 +52,8 @@ if [ "$DEPLOY_MODE" = "prepare" ]; then
     print_info "Next steps:"
     echo "1. Commit your changes: git add . && git commit"
     echo "2. Push to repository: git push origin migrate-to-web-service"
-    echo "3. On Cronus, run: bash dev-scripts/deploy-to-cronus.sh install"
+    echo "3. Copy .secrets file to server (or use .secrets.example as template)"
+    echo "4. On Cronus, run: bash dev-scripts/deploy-to-cronus.sh install"
 
 elif [ "$DEPLOY_MODE" = "install" ]; then
     echo "Mode: Install on production server (Cronus)"
@@ -63,105 +64,153 @@ elif [ "$DEPLOY_MODE" = "install" ]; then
         print_error "Install mode should only be run on Linux (Cronus)"
     fi
 
-    # Install production dependencies
-    print_status "Installing production dependencies..."
-    npm ci --production
+    # Prompt for secrets file
+    echo
+    read -p "Path to secrets file [.secrets]: " SECRETS_FILE
+    SECRETS_FILE=${SECRETS_FILE:-.secrets}
 
-    cd frontend
-    npm ci --production
-    cd ..
-
-    # Create production .env if it doesn't exist
-    if [ ! -f ".env.production" ]; then
-        print_warning "Creating .env.production - YOU MUST EDIT THIS FILE!"
-        cat > .env.production << 'EOF'
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=budgie_production
-DB_USER=budgie_user
-DB_PASSWORD=CHANGE_THIS_PASSWORD
-
-# Session Configuration (CHANGE THIS!)
-SESSION_SECRET=CHANGE_THIS_TO_A_RANDOM_STRING
-
-# Environment
-NODE_ENV=production
-PORT=3001
-
-# CORS (update to your actual domain)
-FRONTEND_URL=http://cronus/budgie-v2
-EOF
-        print_error "Edit .env.production with production values, then run this script again"
+    if [ ! -f "$SECRETS_FILE" ]; then
+        print_error "Secrets file not found: $SECRETS_FILE"
     fi
 
+    print_status "Loading secrets from: $SECRETS_FILE"
+    source "$SECRETS_FILE"
+
+    # Validate required variables
+    if [ -z "$DB_PASSWORD" ] || [ -z "$SESSION_SECRET" ]; then
+        print_error "Missing required variables in secrets file (DB_PASSWORD, SESSION_SECRET)"
+    fi
+
+    # Set defaults if not provided
+    DB_HOST=${DB_HOST:-localhost}
+    DB_PORT=${DB_PORT:-5432}
+    DB_NAME=${DB_NAME:-budgie_production}
+    DB_USER=${DB_USER:-budgie_user}
+    NODE_ENV=${NODE_ENV:-production}
+    PORT=${PORT:-3001}
+    FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+
+    print_info "Configuration:"
+    echo "  Database: $DB_NAME @ $DB_HOST:$DB_PORT"
+    echo "  User: $DB_USER"
+    echo "  API Port: $PORT"
+    echo "  Frontend URL: $FRONTEND_URL"
+    echo
+
+    # Install backend dependencies
+    print_status "Installing backend dependencies..."
+    npm ci --omit=dev
+
+    # Install frontend dependencies (need dev for build)
+    print_status "Installing frontend dependencies..."
+    cd frontend
+    npm ci
+    cd ..
+
+    # Build frontend
+    print_status "Building frontend..."
+    cd frontend
+    npm run build
+    cd ..
+
     # Setup production database
-    print_status "Setting up production database..."
-    source .env.production
+    print_status "Setting up PostgreSQL database..."
 
-    sudo -u postgres psql << EOF || print_warning "Database may already exist"
-CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';
-CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};
-GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};
-ALTER USER ${DB_USER} CREATEDB;
-EOF
+    # Check if database/user already exist
+    DB_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" 2>/dev/null || echo "0")
+    USER_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" 2>/dev/null || echo "0")
 
-    # Run migrations
-    print_status "Running database migrations..."
-    PGPASSWORD=${DB_PASSWORD} psql -h ${DB_HOST} -U ${DB_USER} -d ${DB_NAME} -f database/setup.sql
+    if [ "$USER_EXISTS" = "1" ]; then
+        print_warning "Database user '$DB_USER' already exists"
+        # Update password in case it changed
+        sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null || true
+    else
+        print_status "Creating database user..."
+        sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+        sudo -u postgres psql -c "ALTER USER $DB_USER CREATEDB;"
+    fi
 
-    # Setup PM2
-    print_status "Setting up PM2..."
+    if [ "$DB_EXISTS" = "1" ]; then
+        print_warning "Database '$DB_NAME' already exists"
+    else
+        print_status "Creating database..."
+        sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
+    fi
 
-    cat > ecosystem.config.js << EOF
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;" 2>/dev/null || true
+
+    # Apply database schema
+    print_status "Applying database schema..."
+    PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f database/setup.sql 2>&1 | grep -v "already exists" || true
+
+    # Apply migrations if any exist
+    if [ -d "database/migrations" ] && [ "$(ls -A database/migrations/*.sql 2>/dev/null)" ]; then
+        print_status "Applying database migrations..."
+        for migration in database/migrations/*.sql; do
+            print_info "Running: $(basename $migration)"
+            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f "$migration" 2>&1 | grep -v "already exists" || true
+        done
+    fi
+
+    # Create PM2 ecosystem config with explicit environment variables
+    print_status "Creating PM2 configuration..."
+
+    cat > ecosystem.config.js <<PMEOF
 module.exports = {
   apps: [{
     name: 'budgie-api',
     script: 'backend/server.js',
-    env: {
-      NODE_ENV: 'production',
-    },
-    env_file: '.env.production',
     instances: 1,
     autorestart: true,
     watch: false,
     max_memory_restart: '500M',
+    env: {
+      NODE_ENV: '$NODE_ENV',
+      DB_HOST: '$DB_HOST',
+      DB_PORT: '$DB_PORT',
+      DB_NAME: '$DB_NAME',
+      DB_USER: '$DB_USER',
+      DB_PASSWORD: '$DB_PASSWORD',
+      SESSION_SECRET: '$SESSION_SECRET',
+      PORT: '$PORT',
+      FRONTEND_URL: '$FRONTEND_URL'
+    }
   }]
 };
-EOF
+PMEOF
+
+    # Check if PM2 process already exists
+    if pm2 describe budgie-api &>/dev/null; then
+        print_status "Restarting existing PM2 process..."
+        pm2 delete budgie-api
+    fi
 
     # Start with PM2
+    print_status "Starting application with PM2..."
     pm2 start ecosystem.config.js
     pm2 save
 
-    # Setup nginx
-    print_status "Nginx configuration needed..."
-    print_info "Add this to your nginx config:"
-    cat << 'NGINX'
+    # Wait a moment for app to start
+    sleep 2
 
-# Budgie v2 - Web Service
-location /budgie-v2/ {
-    alias /path/to/budgie/frontend/build/;
-    try_files $uri $uri/ /budgie-v2/index.html;
-}
+    # Check if app is running
+    if pm2 describe budgie-api | grep -q "online"; then
+        print_status "Application started successfully!"
+    else
+        print_warning "Application may have issues starting. Check logs with: pm2 logs budgie-api"
+    fi
 
-# Budgie API
-location /budgie-v2/api/ {
-    proxy_pass http://localhost:3001/api/;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_cache_bypass $http_upgrade;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-}
-NGINX
+    # Setup PM2 to start on boot
+    print_info "Setting up PM2 to start on system boot..."
+    print_info "If prompted, copy and run the sudo command that PM2 provides."
+    pm2 startup || true
 
-    print_status "Deployment complete!"
+    print_status "Backend deployment complete!"
     echo
-    print_info "Check status with: pm2 status"
-    print_info "View logs with: pm2 logs budgie-api"
+    print_info "Status: pm2 status"
+    print_info "Logs: pm2 logs budgie-api"
+    print_info "Test: curl http://localhost:$PORT/api/auth/check"
+    echo
 
 else
     print_error "Unknown mode: $DEPLOY_MODE. Use 'prepare' or 'install'"
