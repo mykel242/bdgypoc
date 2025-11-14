@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth';
+	import { base } from '$app/paths';
 
 	let { user, isAuthenticated, isLoading } = $derived($authStore);
 
@@ -97,7 +98,7 @@
 						</div>
 						<div class="flex gap-4 justify-center">
 							<a
-								href="/budgie-v2/ledgers"
+								href="{base}/ledgers"
 								class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
 							>
 								Go to Ledgers
@@ -113,13 +114,13 @@
 				{:else}
 					<div class="flex gap-4 justify-center pt-4 border-t">
 						<a
-							href="/budgie-v2/login"
+							href="{base}/login"
 							class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
 						>
 							Login
 						</a>
 						<a
-							href="/budgie-v2/register"
+							href="{base}/register"
 							class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
 						>
 							Register

@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { authStore } from '$lib/stores/auth';
 	import { transactionStore } from '$lib/stores/transactionStore';
 	import { ledgers as ledgersApi, type Ledger, type Transaction } from '$lib/api';
@@ -193,7 +194,7 @@
 					<p class="text-red-700 text-sm">{error}</p>
 				</div>
 				<div class="mt-4">
-					<a href="/ledgers" class="text-blue-600 hover:text-blue-700 font-medium">
+					<a href="{base}/ledgers" class="text-blue-600 hover:text-blue-700 font-medium">
 						← Back to Ledgers
 					</a>
 				</div>
@@ -203,7 +204,7 @@
 			<div class="bg-white rounded-lg shadow-xl p-6 mb-6">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-4">
-						<a href="/ledgers" class="text-blue-600 hover:text-blue-700 font-medium">
+						<a href="{base}/ledgers" class="text-blue-600 hover:text-blue-700 font-medium">
 							← Back
 						</a>
 						<div>

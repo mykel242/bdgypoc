@@ -3,6 +3,7 @@
 	import { ApiError } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 
 	let email = '';
 	let first_name = '';
@@ -192,7 +193,7 @@
 			{#if successMessage}
 				<div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
 					<p class="text-green-700 text-sm">{successMessage}</p>
-					<a href="/budgie-v2/login" class="text-green-600 hover:text-green-800 font-medium text-sm mt-2 inline-block">
+					<a href="{base}/login" class="text-green-600 hover:text-green-800 font-medium text-sm mt-2 inline-block">
 						Go to Login →
 					</a>
 				</div>
@@ -371,7 +372,7 @@
 			<div class="mt-6 text-center">
 				<p class="text-sm text-gray-600">
 					Already have an account?
-					<a href="/login" class="text-blue-600 hover:text-blue-700 font-medium">
+					<a href="{base}/login" class="text-blue-600 hover:text-blue-700 font-medium">
 						Log in
 					</a>
 				</p>
