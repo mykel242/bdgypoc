@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { authStore } from '$lib/stores/auth';
 	import { ledgerStore } from '$lib/stores/ledgerStore';
 	import type { Ledger } from '$lib/api';
@@ -178,7 +179,7 @@
 				{#each $ledgerStore.ledgers as ledger (ledger.id)}
 					<div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
 						<!-- Ledger Header (Clickable) -->
-						<a href="/ledgers/{ledger.id}" class="block p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors">
+						<a href="{base}/ledgers/{ledger.id}" class="block p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors">
 							<div class="flex items-start justify-between mb-2">
 								<h3 class="text-xl font-bold text-gray-900 flex-1 mr-2">
 									{ledger.name}
@@ -267,7 +268,7 @@
 
 		<!-- Back to Home -->
 		<div class="mt-6 text-center">
-			<a href="/" class="text-blue-600 hover:text-blue-700 font-medium">
+			<a href="{base}/" class="text-blue-600 hover:text-blue-700 font-medium">
 				← Back to Home
 			</a>
 		</div>
