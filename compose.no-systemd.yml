@@ -1,0 +1,21 @@
+# Override file to disable systemd integration for Podman
+# Use this if you're getting "timer was already loaded" errors
+# Usage: podman-compose -f compose.yml -f compose.prod.yml -f compose.no-systemd.yml up -d
+
+services:
+  db:
+    # Remove restart policy to avoid systemd timer conflicts
+    restart: "no"
+    labels:
+      # Disable systemd unit creation
+      io.podman.compose.systemd: "false"
+
+  backend:
+    restart: "no"
+    labels:
+      io.podman.compose.systemd: "false"
+
+  frontend:
+    restart: "no"
+    labels:
+      io.podman.compose.systemd: "false"
