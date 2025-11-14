@@ -38,6 +38,7 @@ Commands:
     logs-db         View database logs
     build           Rebuild all containers
     clean           Stop and remove all containers and volumes
+    nuke            Nuclear option: remove EVERYTHING (all containers/images/volumes)
     shell-backend   Open shell in backend container
     shell-frontend  Open shell in frontend container
     shell-db        Open PostgreSQL shell
@@ -165,6 +166,25 @@ case $COMMAND in
             print_info "Stopping and removing containers and volumes..."
             $COMPOSE_CMD down -v
             print_status "Cleanup complete"
+        else
+            print_info "Cancelled"
+        fi
+        ;;
+
+    nuke)
+        print_warning "This will REMOVE ALL containers, images, volumes, and networks!"
+        read -p "Are you sure? (yes/no): " -r
+        if [[ $REPLY == "yes" ]]; then
+            print_info "Nuking everything..."
+            if command -v podman &> /dev/null; then
+                podman rm -f $(podman ps -aq) 2>/dev/null || true
+                podman system prune -a --volumes -f
+                print_status "Podman nuked"
+            else
+                docker rm -f $(docker ps -aq) 2>/dev/null || true
+                docker system prune -a --volumes -f
+                print_status "Docker nuked"
+            fi
         else
             print_info "Cancelled"
         fi
