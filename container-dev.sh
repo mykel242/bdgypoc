@@ -75,6 +75,8 @@ check_podman() {
                 sudo sysctl -p > /dev/null
                 print_status "Port 80 enabled for rootless Podman"
             fi
+            # Set BUDGIE_PORT=80 for Linux
+            export BUDGIE_PORT=80
         fi
     elif command -v docker-compose &> /dev/null; then
         COMPOSE_CMD="docker-compose"

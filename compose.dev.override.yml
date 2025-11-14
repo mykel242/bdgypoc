@@ -1,0 +1,17 @@
+# Development Override for Remote Access
+# Copy this to compose.override.yml and update SERVER_IP
+#
+# Usage:
+#   1. Copy: cp compose.dev.override.yml compose.override.yml
+#   2. Edit SERVER_IP in compose.override.yml to your Linux machine's IP
+#   3. Restart: ./container-dev.sh restart
+
+services:
+  frontend:
+    environment:
+      # Change this to your Linux server's IP address
+      # Examples:
+      #   VITE_API_URL: http://192.168.4.224:3001
+      #   VITE_API_URL: http://10.0.0.50:3001
+      VITE_API_URL: http://SERVER_IP:3001
+      VITE_API_BASE_URL: http://SERVER_IP:3001

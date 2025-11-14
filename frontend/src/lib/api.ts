@@ -3,10 +3,9 @@
  * Handles all HTTP requests to the Express API
  */
 
-// In production (static build), use relative path through nginx proxy
-// In development, use environment variable or default to localhost:3001
-const API_BASE_URL = import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? "http://localhost:3001" : "/budgie-v2");
+// Always use relative paths - Vite dev server proxies to backend in dev,
+// nginx proxies in production. Browser never talks directly to backend.
+const API_BASE_URL = "";
 
 export interface User {
   id: number;

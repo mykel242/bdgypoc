@@ -45,8 +45,8 @@ services:
       # App
       NODE_ENV: development
       PORT: 3001
-      # CORS (container name for cross-container, localhost for host access)
-      FRONTEND_URL: http://localhost:5173
+      # CORS - Requests come through nginx proxy
+      FRONTEND_URL: http://nginx
     volumes:
       # Mount source code for hot reload
       - ./backend:/app/backend:ro
@@ -54,8 +54,7 @@ services:
       - ./package-lock.json:/app/package-lock.json:ro
       # Don't mount node_modules (use container's version)
       - backend_node_modules:/app/node_modules
-    ports:
-      - "3001:3001"
+    # No ports exposed - accessed through nginx
     depends_on:
       db:
         condition: service_healthy
@@ -71,8 +70,6 @@ services:
       target: development
     container_name: budgie-frontend
     environment:
-      VITE_API_URL: http://localhost:3001
-      VITE_API_BASE_URL: http://localhost:3001
       # Enable polling for file watching (required for Docker/Podman on macOS)
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: 1000
@@ -81,13 +78,28 @@ services:
       - ./frontend:/app/frontend
       # Don't mount node_modules (use container's version)
       - frontend_node_modules:/app/frontend/node_modules
-    ports:
-      - "5173:5173"
+    # No ports exposed - accessed through nginx
     depends_on:
       - backend
     networks:
       - budgie-network
     command: npm run dev -- --host 0.0.0.0
+
+  # Nginx Reverse Proxy (Development)
+  nginx:
+    image: docker.io/library/nginx:alpine
+    container_name: budgie-nginx
+    volumes:
+      - ./deploy/nginx-dev.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      # Port 80 on Linux (configured by container-dev.sh)
+      # Port 8080 on macOS (port 80 requires sudo)
+      - "${BUDGIE_PORT:-8080}:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - budgie-network
 
 volumes:
   postgres_data:

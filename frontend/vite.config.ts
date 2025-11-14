@@ -10,11 +10,6 @@ export default defineConfig({
 		watch: {
 			usePolling: true,
 			interval: 1000
-		},
-		// HMR configuration for container/host communication
-		hmr: {
-			// Use the host's localhost, not the container's internal hostname
-			clientPort: 5173
 		}
 	}
 });
