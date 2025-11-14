@@ -92,10 +92,14 @@ check_podman() {
 # Check for compose command
 check_podman
 
-# Auto-create .env symlink if needed
-if [ ! -f .env ] && [ -f .env.production ]; then
-    print_info "Linking .env to .env.production..."
-    ln -sf .env.production .env
+# Auto-create .env symlink if needed (only if .env doesn't exist)
+if [ ! -e .env ]; then
+    if [ -f .env.production ]; then
+        print_info "Linking .env to .env.production..."
+        ln -sf .env.production .env
+    else
+        print_warning "No .env or .env.production found. Copy .env.production.example to .env.production"
+    fi
 fi
 
 # Default command
