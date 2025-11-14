@@ -1,0 +1,100 @@
+# Budgie Web Service - Container Orchestration
+# Works with both Docker Compose and Podman Compose
+# Usage:
+#   Development: podman-compose up (or docker-compose up)
+#   Production:  podman-compose -f compose.yml -f compose.prod.yml up -d
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: budgie-db
+    environment:
+      POSTGRES_DB: budgie_dev
+      POSTGRES_USER: budgie_user
+      POSTGRES_PASSWORD: budgie_dev_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/setup.sql:/docker-entrypoint-initdb.d/setup.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U budgie_user -d budgie_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - budgie-network
+
+  # Backend API (Node.js + Express)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      target: development
+    container_name: budgie-backend
+    environment:
+      # Database
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: budgie_dev
+      DB_USER: budgie_user
+      DB_PASSWORD: budgie_dev_password
+      # Session
+      SESSION_SECRET: dev_secret_change_in_production
+      # App
+      NODE_ENV: development
+      PORT: 3001
+      # CORS (container name for cross-container, localhost for host access)
+      FRONTEND_URL: http://localhost:5173
+    volumes:
+      # Mount source code for hot reload
+      - ./backend:/app/backend:ro
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      # Don't mount node_modules (use container's version)
+      - backend_node_modules:/app/node_modules
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - budgie-network
+    command: npm run backend
+
+  # Frontend (SvelteKit dev server)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: development
+    container_name: budgie-frontend
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      VITE_API_BASE_URL: http://localhost:3001
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend:/app/frontend
+      # Don't mount node_modules (use container's version)
+      - frontend_node_modules:/app/frontend/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - budgie-network
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:
+    name: budgie-postgres-data
+  backend_node_modules:
+    name: budgie-backend-node-modules
+  frontend_node_modules:
+    name: budgie-frontend-node-modules
+
+networks:
+  budgie-network:
+    name: budgie-network
+    driver: bridge

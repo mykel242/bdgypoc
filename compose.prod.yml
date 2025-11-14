@@ -1,0 +1,47 @@
+# Production Compose Override
+# Usage: podman-compose -f compose.yml -f compose.prod.yml up -d
+
+services:
+  db:
+    environment:
+      POSTGRES_DB: ${DB_NAME:-budgie_production}
+      POSTGRES_USER: ${DB_USER:-budgie_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    restart: unless-stopped
+
+  backend:
+    build:
+      target: production
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-budgie_production}
+      DB_USER: ${DB_USER:-budgie_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      NODE_ENV: production
+      PORT: 3001
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+    volumes:
+      # In production, don't mount source code
+      - backend_node_modules:/app/node_modules
+    restart: unless-stopped
+    # Override command to run in production mode
+    command: node backend/server.js
+
+  # Replace frontend dev server with nginx serving static files
+  frontend:
+    build:
+      target: production
+    environment: []
+    volumes: []
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    command: ["nginx", "-g", "daemon off;"]
+
+volumes:
+  postgres_data:
+    name: budgie-postgres-data-prod
+  backend_node_modules:
+    name: budgie-backend-node-modules-prod
