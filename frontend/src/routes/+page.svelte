@@ -1,63 +1,18 @@
 <script lang="ts">
-	import { authStore } from '$lib/stores/auth';
-	import { base } from '$app/paths';
-
-	async function handleLogout() {
-		await authStore.logout();
-	}
+	// This is the landing page for Budgie Web Service
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
 	<div class="max-w-2xl w-full">
 		<div class="bg-white rounded-lg shadow-xl p-8">
-			<!-- Header -->
 			<div class="text-center mb-8">
 				<h1 class="text-4xl font-bold text-gray-900 mb-2">
 					Welcome to Budgie
 				</h1>
-				{#if $authStore.isAuthenticated && $authStore.user}
-					<p class="text-xl text-gray-600">
-						Hello, <span class="font-semibold text-blue-600">{$authStore.user.first_name}</span>!
-					</p>
-				{:else}
-					<p class="text-xl text-gray-600">
-						Your Personal Finance Ledger
-					</p>
-				{/if}
+				<p class="text-xl text-gray-600">
+					Your Personal Finance Ledger
+				</p>
 			</div>
-
-			<!-- Authentication Actions -->
-			{#if $authStore.isAuthenticated}
-				<div class="mb-6 flex justify-center gap-3">
-					<a
-						href="{base}/ledgers"
-						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-					>
-						My Ledgers
-					</a>
-					<button
-						on:click={handleLogout}
-						class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-					>
-						Log Out
-					</button>
-				</div>
-			{:else if !$authStore.isLoading}
-				<div class="mb-6 flex justify-center gap-3">
-					<a
-						href="{base}/login"
-						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-					>
-						Log In
-					</a>
-					<a
-						href="{base}/register"
-						class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-					>
-						Sign Up
-					</a>
-				</div>
-			{/if}
 
 			<div class="space-y-6">
 				<div class="bg-blue-50 border-l-4 border-blue-500 p-4">
@@ -90,6 +45,7 @@
 							<a
 								href="http://localhost:3001/health"
 								target="_blank"
+								rel="noopener noreferrer"
 								class="text-blue-600 hover:text-blue-800 hover:underline"
 							>
 								→ API Health Check
@@ -99,6 +55,7 @@
 							<a
 								href="http://localhost:3001/api"
 								target="_blank"
+								rel="noopener noreferrer"
 								class="text-blue-600 hover:text-blue-800 hover:underline"
 							>
 								→ API Documentation
@@ -108,12 +65,16 @@
 							<a
 								href="https://svelte.dev/docs/kit"
 								target="_blank"
+								rel="noopener noreferrer"
 								class="text-blue-600 hover:text-blue-800 hover:underline"
 							>
 								→ SvelteKit Docs
 							</a>
 						</li>
 					</ul>
+					<p class="text-xs text-gray-500 mt-4">
+						Frontend is at /budgie-v2/ (matches production base path)
+					</p>
 				</div>
 
 				<div class="text-center text-sm text-gray-500 pt-4 border-t">

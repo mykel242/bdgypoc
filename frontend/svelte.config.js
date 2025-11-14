@@ -10,14 +10,13 @@ const config = {
 	kit: {
 		// Use static adapter for deployment to nginx
 		adapter: adapter({
-			// Default options for static adapter
 			pages: 'build',
 			assets: 'build',
 			fallback: 'index.html',
 			precompress: false,
 			strict: true
 		}),
-		// Set base path for serving from /budgie-v2/
+		// Base path for deployment (matches nginx configuration)
 		paths: {
 			base: '/budgie-v2'
 		}

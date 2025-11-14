@@ -195,6 +195,7 @@ EOF
 							<a
 								href="http://localhost:3001/health"
 								target="_blank"
+								rel="noopener noreferrer"
 								class="text-blue-600 hover:text-blue-800 hover:underline"
 							>
 								→ API Health Check
@@ -204,6 +205,7 @@ EOF
 							<a
 								href="http://localhost:3001/api"
 								target="_blank"
+								rel="noopener noreferrer"
 								class="text-blue-600 hover:text-blue-800 hover:underline"
 							>
 								→ API Documentation
@@ -213,12 +215,16 @@ EOF
 							<a
 								href="https://svelte.dev/docs/kit"
 								target="_blank"
+								rel="noopener noreferrer"
 								class="text-blue-600 hover:text-blue-800 hover:underline"
 							>
 								→ SvelteKit Docs
 							</a>
 						</li>
 					</ul>
+					<p class="text-xs text-gray-500 mt-4">
+						Dev frontend is at /budgie-v2/ (matches production base path)
+					</p>
 				</div>
 
 				<div class="text-center text-sm text-gray-500 pt-4 border-t">
@@ -482,13 +488,18 @@ echo "2. Start development servers:"
 echo "   npm run dev"
 echo
 echo "3. Access applications:"
-echo "   - Frontend: http://localhost:5173"
-echo "   - Backend API: http://localhost:3001"
+echo "   - Frontend: http://localhost:5173/budgie-v2/"
+echo "   - Backend API: http://localhost:3001/api/"
 echo
 echo "4. Database credentials:"
 echo "   - Host: localhost:5432"
 echo "   - Database: budgie_dev"
 echo "   - User: budgie_user"
 echo "   - Password: budgie_dev_password"
+echo
+echo "5. Configuration:"
+echo "   - Backend loads .secrets first, then .env"
+echo "   - Frontend uses /budgie-v2 base path (matches production)"
+echo "   - CORS allows requests from http://localhost:5173"
 echo
 print_status "Happy coding! 🚀"

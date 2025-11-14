@@ -4,7 +4,24 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const session = require('express-session');
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+
+// Load environment configuration
+// Try .env first (development), then .secrets (production/testing)
+// This allows local dev work with .env while keeping .secrets for production
+const secretsPath = path.join(__dirname, '..', '.secrets');
+const envPath = path.join(__dirname, '..', '.env');
+
+if (fs.existsSync(envPath)) {
+    console.log('Loading configuration from .env');
+    require('dotenv').config({ path: envPath });
+} else if (fs.existsSync(secretsPath)) {
+    console.log('Loading configuration from .secrets');
+    require('dotenv').config({ path: secretsPath });
+} else {
+    console.warn('Warning: No .env or .secrets file found. Using environment variables only.');
+}
 
 const { sequelize } = require('./config/database');
 

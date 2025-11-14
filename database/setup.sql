@@ -3,10 +3,8 @@
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+    username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -19,8 +17,6 @@ CREATE TABLE IF NOT EXISTS ledgers (
     name VARCHAR(255) NOT NULL,
     starting_balance DECIMAL(12,2) DEFAULT 0.00,
     starting_balance_date DATE,
-    is_locked BOOLEAN DEFAULT FALSE,
-    is_archived BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, name)
@@ -41,8 +37,15 @@ CREATE TABLE IF NOT EXISTS transactions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Sessions table is auto-created by connect-session-sequelize
--- Do not manually create it here as the schema must match what the session store expects
+-- Sessions table (for express-session)
+CREATE TABLE IF NOT EXISTS sessions (
+    sid VARCHAR NOT NULL COLLATE "default",
+    sess JSON NOT NULL,
+    expire TIMESTAMP(6) NOT NULL
+) WITH (OIDS=FALSE);
+
+ALTER TABLE sessions ADD CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
+CREATE INDEX IF NOT EXISTS IDX_session_expire ON sessions (expire);
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_ledgers_user_id ON ledgers(user_id);
