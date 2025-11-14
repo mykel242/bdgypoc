@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS ledgers (
     name VARCHAR(255) NOT NULL,
     starting_balance DECIMAL(12,2) DEFAULT 0.00,
     starting_balance_date DATE,
+    is_locked BOOLEAN DEFAULT FALSE NOT NULL,
+    is_archived BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, name)
