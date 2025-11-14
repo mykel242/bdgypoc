@@ -8,5 +8,6 @@
     "*.test.js",
     "*.spec.js"
   ],
-  "delay": "1000"
+  "delay": "2000",
+  "legacyWatch": true
 }
