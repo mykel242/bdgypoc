@@ -1,0 +1,9 @@
+# Rootless Podman Override
+# Use this when running Podman without root to avoid privileged port issues
+# Usage: podman-compose -f compose.yml -f compose.prod.yml -f compose.rootless.yml up -d
+
+services:
+  frontend:
+    ports:
+      # Map to 8080 instead of 80 (unprivileged port)
+      - "8080:80"
