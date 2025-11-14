@@ -79,8 +79,8 @@ function createAuthStore() {
 					error: null
 				});
 
-				// Redirect to home
-				goto('/');
+				// Redirect to ledgers after successful registration
+				goto(`${base}/ledgers`);
 			} catch (error) {
 				const errorMessage = error instanceof ApiError
 					? error.message
@@ -111,8 +111,8 @@ function createAuthStore() {
 					error: null
 				});
 
-				// Redirect to return URL or home
-				goto(returnUrl || '/');
+				// Redirect to return URL or ledgers
+				goto(returnUrl || `${base}/ledgers`);
 			} catch (error) {
 				const errorMessage = error instanceof ApiError
 					? error.message

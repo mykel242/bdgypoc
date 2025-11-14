@@ -16,13 +16,12 @@
 	let isSubmitting = false;
 	let errors: Record<string, string> = {};
 	let serverError = '';
-	let successMessage = '';
 
-	// Redirect if already authenticated (but not if we just registered and showing success)
+	// Redirect if already authenticated
 	onMount(() => {
 		const unsubscribe = authStore.subscribe(state => {
-			if (state.isAuthenticated && !state.isLoading && !successMessage) {
-				goto(`${base}/`);
+			if (state.isAuthenticated && !state.isLoading) {
+				goto(`${base}/ledgers`);
 			}
 		});
 		return unsubscribe;
@@ -146,16 +145,10 @@
 		// Submit to API
 		isSubmitting = true;
 		try {
-			// Call API directly instead of authStore to avoid auto-login redirect
-			await authApi.register(email, first_name, last_name, password);
-			// Show success message instead of redirecting
-			successMessage = 'Account created successfully! Please log in with your credentials.';
-			// Clear form
-			email = '';
-			first_name = '';
-			last_name = '';
-			password = '';
-			confirmPassword = '';
+			// Use authStore.register which logs in and redirects to ledgers
+			await authStore.register(email, first_name, last_name, password);
+			// Redirect happens in authStore
+			goto(`${base}/ledgers`);
 		} catch (error) {
 			console.log('Registration error caught:', error);
 			if (error instanceof ApiError) {
@@ -189,16 +182,6 @@
 				<h1 class="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
 				<p class="text-gray-600">Get started with Budgie</p>
 			</div>
-
-			<!-- Success Message -->
-			{#if successMessage}
-				<div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-					<p class="text-green-700 text-sm">{successMessage}</p>
-					<a href="{base}/login" class="text-green-600 hover:text-green-800 font-medium text-sm mt-2 inline-block">
-						Go to Login →
-					</a>
-				</div>
-			{/if}
 
 			<!-- Server Error -->
 			{#if serverError}
