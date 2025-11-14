@@ -1,16 +1,11 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth';
-	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
 
-	let { isAuthenticated, isLoading } = $derived($authStore);
+	let { user, isAuthenticated, isLoading } = $derived($authStore);
 
-	// Redirect to ledgers if already authenticated
-	onMount(() => {
-		if (isAuthenticated) {
-			goto('/budgie-v2/ledgers');
-		}
-	});
+	async function handleLogout() {
+		await authStore.logout();
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -88,20 +83,49 @@
 					</p>
 				</div>
 
-				<div class="flex gap-4 justify-center pt-4 border-t">
-					<a
-						href="/budgie-v2/login"
-						class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-					>
-						Login
-					</a>
-					<a
-						href="/budgie-v2/register"
-						class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
-					>
-						Register
-					</a>
-				</div>
+				{#if isLoading}
+					<div class="flex justify-center pt-4 border-t">
+						<p class="text-gray-500">Loading...</p>
+					</div>
+				{:else if isAuthenticated && user}
+					<div class="pt-4 border-t">
+						<div class="text-center mb-4">
+							<p class="text-gray-700">
+								Welcome back, <span class="font-semibold">{user.first_name} {user.last_name}</span>!
+							</p>
+							<p class="text-sm text-gray-500">{user.email}</p>
+						</div>
+						<div class="flex gap-4 justify-center">
+							<a
+								href="/budgie-v2/ledgers"
+								class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+							>
+								Go to Ledgers
+							</a>
+							<button
+								on:click={handleLogout}
+								class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+							>
+								Logout
+							</button>
+						</div>
+					</div>
+				{:else}
+					<div class="flex gap-4 justify-center pt-4 border-t">
+						<a
+							href="/budgie-v2/login"
+							class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+						>
+							Login
+						</a>
+						<a
+							href="/budgie-v2/register"
+							class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+						>
+							Register
+						</a>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
