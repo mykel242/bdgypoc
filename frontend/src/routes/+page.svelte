@@ -1,5 +1,16 @@
 <script lang="ts">
-	// This is the landing page for Budgie Web Service
+	import { authStore } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+
+	let { isAuthenticated, isLoading } = $derived($authStore);
+
+	// Redirect to ledgers if already authenticated
+	onMount(() => {
+		if (isAuthenticated) {
+			goto('/budgie-v2/ledgers');
+		}
+	});
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -77,8 +88,19 @@
 					</p>
 				</div>
 
-				<div class="text-center text-sm text-gray-500 pt-4 border-t">
-					Next: Build authentication, ledgers, and transaction management
+				<div class="flex gap-4 justify-center pt-4 border-t">
+					<a
+						href="/budgie-v2/login"
+						class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+					>
+						Login
+					</a>
+					<a
+						href="/budgie-v2/register"
+						class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+					>
+						Register
+					</a>
 				</div>
 			</div>
 		</div>

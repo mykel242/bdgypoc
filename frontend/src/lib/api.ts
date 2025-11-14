@@ -3,7 +3,10 @@
  * Handles all HTTP requests to the Express API
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// In production (static build), use relative path through nginx proxy
+// In development, use environment variable or default to localhost:3001
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:3001" : "/budgie-v2");
 
 export interface User {
   id: number;

@@ -54,23 +54,49 @@ EOF
 check_podman() {
     if command -v podman-compose &> /dev/null; then
         COMPOSE_CMD="podman-compose"
+        # Auto-start Podman machine on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            if ! podman machine list 2>/dev/null | grep -q "Currently running"; then
+                print_info "Starting Podman machine..."
+                podman machine start 2>/dev/null || {
+                    print_info "Initializing Podman machine..."
+                    podman machine init --cpus 4 --memory 4096 --disk-size 50
+                    podman machine start
+                }
+            fi
+        fi
+        # Fix privileged port issue on Linux
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            PORT_START=$(sysctl -n net.ipv4.ip_unprivileged_port_start 2>/dev/null || echo "1024")
+            if [ "$PORT_START" -gt 80 ]; then
+                print_info "Configuring unprivileged port 80..."
+                echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee -a /etc/sysctl.conf > /dev/null
+                sudo sysctl -p > /dev/null
+                print_status "Port 80 enabled for rootless Podman"
+            fi
+        fi
     elif command -v docker-compose &> /dev/null; then
         COMPOSE_CMD="docker-compose"
     else
         echo "Error: Neither podman-compose nor docker-compose found"
         echo ""
-        echo "Install Podman:"
-        echo "  brew install podman podman-compose"
-        echo "  podman machine init && podman machine start"
-        echo ""
-        echo "Or install Docker:"
-        echo "  brew install --cask docker"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            echo "Install: brew install podman podman-compose"
+        else
+            echo "Install: sudo apt-get install -y podman podman-compose"
+        fi
         exit 1
     fi
 }
 
 # Check for compose command
 check_podman
+
+# Auto-create .env symlink if needed
+if [ ! -f .env ] && [ -f .env.production ]; then
+    print_info "Linking .env to .env.production..."
+    ln -sf .env.production .env
+fi
 
 # Default command
 COMMAND=${1:-start}
