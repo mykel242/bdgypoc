@@ -119,10 +119,9 @@
 	}
 
 	async function handleSubmit() {
-		// Clear previous errors and messages
+		// Clear previous errors
 		errors = {};
 		serverError = '';
-		successMessage = '';
 
 		// Validate all fields
 		const emailError = validateEmail();
