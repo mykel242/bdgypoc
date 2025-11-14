@@ -18,11 +18,11 @@
 	let serverError = '';
 	let successMessage = '';
 
-	// Redirect if already authenticated
+	// Redirect if already authenticated (but not if we just registered and showing success)
 	onMount(() => {
 		const unsubscribe = authStore.subscribe(state => {
-			if (state.isAuthenticated && !state.isLoading) {
-				goto('/');
+			if (state.isAuthenticated && !state.isLoading && !successMessage) {
+				goto(`${base}/`);
 			}
 		});
 		return unsubscribe;
