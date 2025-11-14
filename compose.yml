@@ -73,6 +73,9 @@ services:
     environment:
       VITE_API_URL: http://localhost:3001
       VITE_API_BASE_URL: http://localhost:3001
+      # Enable polling for file watching (required for Docker/Podman on macOS)
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: 1000
     volumes:
       # Mount source code for hot reload
       - ./frontend:/app/frontend
