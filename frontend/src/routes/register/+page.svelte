@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth';
-	import { ApiError } from '$lib/api';
+	import { auth as authApi, ApiError } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
@@ -146,7 +146,8 @@
 		// Submit to API
 		isSubmitting = true;
 		try {
-			await authStore.register(email, first_name, last_name, password);
+			// Call API directly instead of authStore to avoid auto-login redirect
+			await authApi.register(email, first_name, last_name, password);
 			// Show success message instead of redirecting
 			successMessage = 'Account created successfully! Please log in with your credentials.';
 			// Clear form
