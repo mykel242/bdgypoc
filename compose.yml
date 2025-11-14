@@ -7,7 +7,7 @@
 services:
   # PostgreSQL Database
   db:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     container_name: budgie-db
     environment:
       POSTGRES_DB: budgie_dev

@@ -4,7 +4,7 @@
 # ============================================
 # Base Stage - Common dependencies
 # ============================================
-FROM node:24-alpine AS base
+FROM docker.io/library/node:24-alpine AS base
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -46,7 +46,7 @@ RUN npm ci --omit=dev
 # ============================================
 # Production Stage
 # ============================================
-FROM node:24-alpine AS production
+FROM docker.io/library/node:24-alpine AS production
 
 # Install runtime dependencies
 RUN apk add --no-cache postgresql-client
