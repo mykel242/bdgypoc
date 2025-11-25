@@ -2,7 +2,7 @@
 # Budgie Database Restore Script
 # Restores database from SQL backup file
 
-set -e
+set -euo pipefail
 
 # Colors
 GREEN='\033[0;32m'
@@ -69,25 +69,45 @@ print_success "Safety backup created: $SAFETY_BACKUP"
 
 print_info "Restoring database from backup..."
 
-# Drop and recreate database
-podman exec budgie-db psql -U budgie_user -d postgres <<-EOSQL
+# Terminate all connections to the database
+print_info "Terminating active connections..."
+podman exec budgie-db psql -U budgie_user -d postgres -c "
     SELECT pg_terminate_backend(pg_stat_activity.pid)
     FROM pg_stat_activity
     WHERE pg_stat_activity.datname = 'budgie_dev'
       AND pid <> pg_backend_pid();
+" > /dev/null 2>&1 || true
 
-    DROP DATABASE IF EXISTS budgie_dev;
-    CREATE DATABASE budgie_dev;
-EOSQL
+# Drop database (ignore errors if it doesn't exist)
+print_info "Dropping existing database..."
+podman exec budgie-db psql -U budgie_user -d postgres -c "DROP DATABASE IF EXISTS budgie_dev;" 2>&1 | grep -v "does not exist" || true
 
-# Restore from backup
-podman exec -i budgie-db psql -U budgie_user budgie_dev < "$BACKUP_FILE"
+# Create fresh database
+print_info "Creating fresh database..."
+podman exec budgie-db psql -U budgie_user -d postgres -c "CREATE DATABASE budgie_dev;"
 
-print_success "Database restored successfully!"
+# Restore from backup (suppress verbose output, only show errors)
+print_info "Restoring data from backup..."
+if podman exec -i budgie-db psql -U budgie_user -d budgie_dev -q < "$BACKUP_FILE" 2>&1 | grep -i "error"; then
+    print_warning "Some errors occurred during restore (see above)"
+    print_info "Checking if restore was successful..."
+else
+    print_success "Data restored without errors"
+fi
 
 print_info "Verifying restore..."
 TABLE_COUNT=$(podman exec budgie-db psql -U budgie_user -d budgie_dev -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
-print_success "Found $TABLE_COUNT tables"
+print_success "Found $TABLE_COUNT tables in restored database"
+
+# Verify data was restored
+USER_COUNT=$(podman exec budgie-db psql -U budgie_user -d budgie_dev -t -c "SELECT COUNT(*) FROM users;")
+LEDGER_COUNT=$(podman exec budgie-db psql -U budgie_user -d budgie_dev -t -c "SELECT COUNT(*) FROM ledgers;")
+TRANSACTION_COUNT=$(podman exec budgie-db psql -U budgie_user -d budgie_dev -t -c "SELECT COUNT(*) FROM transactions;")
+
+print_success "Restored data:"
+echo "  Users: $USER_COUNT"
+echo "  Ledgers: $LEDGER_COUNT"
+echo "  Transactions: $TRANSACTION_COUNT"
 
 echo ""
 print_warning "Don't forget to restart the backend to clear any cached connections:"
