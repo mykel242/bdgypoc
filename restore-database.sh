@@ -124,8 +124,14 @@ elif command -v docker-compose &> /dev/null; then
 fi
 
 if [ -n "$COMPOSE_CMD" ]; then
-    $COMPOSE_CMD restart backend nginx > /dev/null 2>&1
-    print_success "Backend and nginx restarted"
+    # Full stop/start to ensure nginx picks up new backend IP
+    print_info "Stopping backend and nginx..."
+    $COMPOSE_CMD stop backend nginx > /dev/null 2>&1
+    print_info "Starting backend and nginx..."
+    $COMPOSE_CMD start backend > /dev/null 2>&1
+    sleep 2  # Wait for backend to be ready
+    $COMPOSE_CMD start nginx > /dev/null 2>&1
+    print_success "Services restarted"
 else
     print_warning "Please restart services manually:"
     echo "  ./container-dev.sh restart"
