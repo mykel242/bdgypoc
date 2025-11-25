@@ -39,6 +39,9 @@ tmp/
 temp/
 cookies.txt
 
+# Database backups
+backups/
+
 # Claude AI
 .claude/
 
