@@ -37,6 +37,10 @@ coverage/
 # Temporary files
 tmp/
 temp/
+cookies.txt
 
 # Claude AI
 .claude/
+
+# Local compose overrides
+compose.override.yml
