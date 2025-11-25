@@ -43,7 +43,7 @@
 		// Check auth
 		const unsubAuth = authStore.subscribe(state => {
 			if (!state.isAuthenticated && !state.isLoading) {
-				goto('/login?returnUrl=/ledgers/' + $page.params.id);
+				goto(`${base}/login?returnUrl=${base}/ledgers/${$page.params.id}`);
 			}
 		});
 

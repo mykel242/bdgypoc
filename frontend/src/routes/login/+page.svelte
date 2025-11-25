@@ -13,14 +13,14 @@
 	let isSubmitting = false;
 	let serverError = '';
 
-	// Get return URL from query params
-	$: returnUrl = $page.url.searchParams.get('returnUrl') || '/';
+	// Get return URL from query params (default to ledgers page)
+	$: returnUrl = $page.url.searchParams.get('returnUrl') || `${base}/ledgers`;
 
 	// Redirect if already authenticated
 	onMount(() => {
 		const unsubscribe = authStore.subscribe(state => {
 			if (state.isAuthenticated && !state.isLoading) {
-				goto(returnUrl);
+				goto(`${base}/ledgers`);
 			}
 		});
 		return unsubscribe;

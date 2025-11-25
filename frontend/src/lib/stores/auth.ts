@@ -154,7 +154,7 @@ function createAuthStore() {
 					error: null
 				});
 
-				goto('/login');
+				goto(`${base}/login`);
 			}
 		},
 
