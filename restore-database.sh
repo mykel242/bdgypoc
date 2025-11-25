@@ -109,6 +109,28 @@ echo "  Users: $USER_COUNT"
 echo "  Ledgers: $LEDGER_COUNT"
 echo "  Transactions: $TRANSACTION_COUNT"
 
+# Clear all sessions to force users to re-authenticate
+print_info "Clearing all sessions to force re-authentication..."
+SESSION_COUNT=$(podman exec budgie-db psql -U budgie_user -d budgie_dev -t -c "SELECT COUNT(*) FROM sessions;")
+podman exec budgie-db psql -U budgie_user -d budgie_dev -c "DELETE FROM sessions;" > /dev/null
+print_success "Cleared $SESSION_COUNT active session(s)"
+
 echo ""
-print_warning "Don't forget to restart the backend to clear any cached connections:"
-echo "  ./container-dev.sh restart"
+print_warning "Restarting services to apply changes..."
+if command -v podman-compose &> /dev/null; then
+    COMPOSE_CMD="podman-compose"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+fi
+
+if [ -n "$COMPOSE_CMD" ]; then
+    $COMPOSE_CMD restart backend nginx > /dev/null 2>&1
+    print_success "Backend and nginx restarted"
+else
+    print_warning "Please restart services manually:"
+    echo "  ./container-dev.sh restart"
+fi
+
+echo ""
+print_success "Database restore complete!"
+print_info "All users must log in again with their credentials"
