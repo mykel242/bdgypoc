@@ -109,17 +109,17 @@ fi
 COMMAND=${1:-start}
 
 case $COMMAND in
-    start)
+    start|up)
         print_info "Starting Budgie development environment..."
-        $COMPOSE_CMD up
-        ;;
-
-    start-bg|up)
-        print_info "Starting Budgie in background..."
         $COMPOSE_CMD up -d
         print_status "Services started in background"
         print_info "View logs: ./container-dev.sh logs"
         print_info "Stop: ./container-dev.sh stop"
+        ;;
+
+    start-fg|foreground)
+        print_info "Starting Budgie in foreground (Ctrl+C to stop)..."
+        $COMPOSE_CMD up
         ;;
 
     stop|down)
