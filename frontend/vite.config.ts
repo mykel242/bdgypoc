@@ -6,6 +6,8 @@ export default defineConfig({
 	plugins: [sveltekit(), tailwindcss()],
 	// Dev server configuration
 	server: {
+		// Allow access from any hostname (needed for accessing via server names like 'cronus')
+		allowedHosts: true,
 		// Enable polling for file watching in containers (fixes HMR on macOS/Podman)
 		watch: {
 			usePolling: true,
