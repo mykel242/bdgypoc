@@ -4,15 +4,23 @@
 	import { base } from '$app/paths';
 	import { authStore } from '$lib/stores/auth';
 	import { ledgerStore } from '$lib/stores/ledgerStore';
-	import type { Ledger } from '$lib/api';
+	import { ledgers as ledgersApi, type Ledger } from '$lib/api';
 	import LedgerModal from '$lib/components/LedgerModal.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 
 	let showLedgerModal = false;
 	let showDeleteDialog = false;
+	let showImportModal = false;
 	let editingLedger: Ledger | null = null;
 	let deletingLedger: Ledger | null = null;
 	let actionError = '';
+
+	// Import state
+	let importFile: File | null = null;
+	let importShiftMonth = false;
+	let isImporting = false;
+	let importError = '';
+	let fileInput: HTMLInputElement;
 
 	// Auth check
 	onMount(() => {
@@ -96,6 +104,51 @@
 			currency: 'USD',
 		}).format(amount);
 	}
+
+	function handleImportClick() {
+		importFile = null;
+		importShiftMonth = false;
+		importError = '';
+		showImportModal = true;
+	}
+
+	function handleFileSelect(event: Event) {
+		const target = event.target as HTMLInputElement;
+		if (target.files && target.files.length > 0) {
+			importFile = target.files[0];
+			importError = '';
+		}
+	}
+
+	async function handleImport() {
+		if (!importFile) {
+			importError = 'Please select a file to import';
+			return;
+		}
+
+		isImporting = true;
+		importError = '';
+
+		try {
+			const fileContent = await importFile.text();
+			await ledgersApi.import(fileContent, importShiftMonth);
+			await ledgerStore.loadLedgers($ledgerStore.showArchived);
+			showImportModal = false;
+			importFile = null;
+			importShiftMonth = false;
+		} catch (error) {
+			importError = error instanceof Error ? error.message : 'Failed to import ledger';
+		} finally {
+			isImporting = false;
+		}
+	}
+
+	function closeImportModal() {
+		showImportModal = false;
+		importFile = null;
+		importShiftMonth = false;
+		importError = '';
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -117,6 +170,15 @@
 						class="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
 					>
 						{$ledgerStore.showArchived ? 'Hide Archived' : 'Show Archived'}
+					</button>
+					<button
+						on:click={handleImportClick}
+						class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium flex items-center gap-2"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+						</svg>
+						Import
 					</button>
 					<button
 						on:click={handleCreateNew}
@@ -298,4 +360,78 @@
 			deletingLedger = null;
 		}}
 	/>
+{/if}
+
+{#if showImportModal}
+	<!-- Import Modal -->
+	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+		<div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+			<div class="p-6">
+				<h2 class="text-2xl font-bold text-gray-900 mb-4">Import Ledger</h2>
+
+				{#if importError}
+					<div class="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+						<p class="text-red-700 text-sm">{importError}</p>
+					</div>
+				{/if}
+
+				<div class="mb-6">
+					<label class="block text-sm font-medium text-gray-700 mb-2">
+						Select export file
+					</label>
+					<input
+						type="file"
+						accept=".txt,.json"
+						bind:this={fileInput}
+						on:change={handleFileSelect}
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+					/>
+					{#if importFile}
+						<p class="mt-2 text-sm text-gray-600">Selected: {importFile.name}</p>
+					{/if}
+				</div>
+
+				<div class="mb-6">
+					<label class="flex items-start gap-3 cursor-pointer">
+						<input
+							type="checkbox"
+							bind:checked={importShiftMonth}
+							class="w-5 h-5 mt-0.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+						/>
+						<div>
+							<span class="text-sm font-medium text-gray-900">Import for new month</span>
+							<p class="text-xs text-gray-500 mt-1">
+								Shift all dates to the current month, reset paid/cleared status, and name the ledger after the current month.
+							</p>
+						</div>
+					</label>
+				</div>
+
+				<div class="flex gap-3">
+					<button
+						on:click={closeImportModal}
+						disabled={isImporting}
+						class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+					>
+						Cancel
+					</button>
+					<button
+						on:click={handleImport}
+						disabled={!importFile || isImporting}
+						class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+					>
+						{#if isImporting}
+							<svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+							Importing...
+						{:else}
+							Import
+						{/if}
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
 {/if}

@@ -184,6 +184,13 @@ export interface LedgerBalanceResponse {
   transaction_count: number;
 }
 
+export interface LedgerImportResponse {
+  message: string;
+  ledger: Ledger;
+  dateShifted: boolean;
+  daysShifted: number;
+}
+
 /**
  * Ledger API
  */
@@ -267,6 +274,23 @@ export const ledgers = {
   async copy(id: number): Promise<LedgerResponse> {
     return apiFetch<LedgerResponse>(`/api/ledgers/${id}/copy`, {
       method: "POST",
+    });
+  },
+
+  /**
+   * Export a ledger with all transactions (base64-encoded JSON)
+   */
+  async export(id: number): Promise<{ data: string; filename: string }> {
+    return apiFetch<{ data: string; filename: string }>(`/api/ledgers/${id}/export`);
+  },
+
+  /**
+   * Import a ledger from export data
+   */
+  async import(data: string, shiftMonth: boolean = false): Promise<LedgerImportResponse> {
+    return apiFetch<LedgerImportResponse>("/api/ledgers/import", {
+      method: "POST",
+      body: JSON.stringify({ data, shiftMonth }),
     });
   },
 };
