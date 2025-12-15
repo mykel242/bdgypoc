@@ -19,13 +19,112 @@
 	// New transaction row data
 	let newDate = new Date().toISOString().split('T')[0];
 	let newDescription = '';
-	let newCredit = '';
-	let newDebit = '';
+	let newAmount = ''; // positive = credit, negative = debit
+
+	// Selection state for cell-level editing
+	let selectedRowId: number | null = null;
+	let selectedCell: string | null = null; // 'date', 'description', 'credit', 'debit', 'paid', 'cleared'
+
+	// Drag and drop state
+	let draggedIndex: number | null = null;
+	let dragOverIndex: number | null = null;
+
+	function selectCell(rowId: number, cell: string) {
+		selectedRowId = rowId;
+		selectedCell = cell;
+	}
+
+	function clearSelection() {
+		selectedRowId = null;
+		selectedCell = null;
+	}
+
+	function isEditing(rowId: number, cell: string): boolean {
+		return selectedRowId === rowId && selectedCell === cell;
+	}
+
+	// Drag and drop handlers
+	function handleDragStart(e: DragEvent, index: number) {
+		if (ledger?.is_locked) return;
+		draggedIndex = index;
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', index.toString());
+		}
+	}
+
+	function handleDragOver(e: DragEvent, index: number) {
+		e.preventDefault();
+		if (e.dataTransfer) {
+			e.dataTransfer.dropEffect = 'move';
+		}
+		dragOverIndex = index;
+	}
+
+	function handleDragLeave() {
+		dragOverIndex = null;
+	}
+
+	function handleDragEnd() {
+		draggedIndex = null;
+		dragOverIndex = null;
+	}
+
+	async function handleDrop(e: DragEvent, toIndex: number) {
+		e.preventDefault();
+		if (draggedIndex === null || draggedIndex === toIndex) {
+			handleDragEnd();
+			return;
+		}
+
+		try {
+			await transactionStore.reorderTransactions(draggedIndex, toIndex);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to reorder transactions';
+		}
+		handleDragEnd();
+	}
+
+	// Formatting helpers (defined before reactive statements that use them)
+	function formatCurrency(amount: number | string): string {
+		const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+		return Math.round(num || 0).toString();
+	}
+
+	function formatAmount(credit: number | string, debit: number | string): { text: string; isDebit: boolean } {
+		const creditNum = typeof credit === 'string' ? parseFloat(credit) : credit;
+		const debitNum = typeof debit === 'string' ? parseFloat(debit) : debit;
+
+		if (debitNum && debitNum > 0) {
+			return { text: Math.round(debitNum).toString(), isDebit: true };
+		}
+		if (creditNum && creditNum > 0) {
+			return { text: Math.round(creditNum).toString(), isDebit: false };
+		}
+		return { text: '', isDebit: false };
+	}
+
+	function formatDebit(amount: number | string): string {
+		const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+		if (!num || num <= 0) return '';
+		return `(${Math.round(num)})`;
+	}
+
+	function formatBalance(amount: number | string): { text: string; isNegative: boolean } {
+		const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+		const val = num || 0;
+		if (val < 0) {
+			return { text: `$${Math.round(Math.abs(val))}`, isNegative: true };
+		}
+		return { text: `$${Math.round(val)}`, isNegative: false };
+	}
 
 	// Computed values
 	$: totalCredit = $transactionStore.transactions.reduce((sum, t) => sum + (parseFloat(t.credit_amount.toString()) || 0), 0);
 	$: totalDebit = $transactionStore.transactions.reduce((sum, t) => sum + (parseFloat(t.debit_amount.toString()) || 0), 0);
+	$: netAmount = totalCredit - totalDebit;
 	$: finalBalance = startingBalance + totalCredit - totalDebit;
+	$: finalBalanceFormatted = formatBalance(finalBalance);
 
 	// Calculate running balances
 	$: transactionsWithBalance = $transactionStore.transactions.reduce((acc, t, index) => {
@@ -102,15 +201,16 @@
 	}
 
 	async function handleAddTransaction() {
-		if (!newDescription.trim() || (!newCredit && !newDebit)) return;
+		if (!newDescription.trim() || !newAmount) return;
 
+		const amountVal = Math.round(parseFloat(newAmount) || 0);
 		try {
 			await transactionStore.createTransaction({
 				ledger_id: ledgerId,
 				date: newDate,
 				description: newDescription.trim(),
-				credit_amount: parseFloat(newCredit) || 0,
-				debit_amount: parseFloat(newDebit) || 0,
+				credit_amount: amountVal >= 0 ? amountVal : 0,
+				debit_amount: amountVal < 0 ? Math.abs(amountVal) : 0,
 				is_paid: false,
 				is_cleared: false,
 			});
@@ -118,8 +218,7 @@
 			// Clear form
 			newDate = new Date().toISOString().split('T')[0];
 			newDescription = '';
-			newCredit = '';
-			newDebit = '';
+			newAmount = '';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to add transaction';
 		}
@@ -158,27 +257,6 @@
 		}
 	}
 
-	function handleCreditInput(e: Event, transaction: Transaction) {
-		const target = e.target as HTMLInputElement;
-		const value = target.value;
-		if (value) {
-			// Clear debit when credit is entered
-			handleUpdateTransaction(transaction, 'debit_amount', 0);
-		}
-	}
-
-	function handleDebitInput(e: Event, transaction: Transaction) {
-		const target = e.target as HTMLInputElement;
-		const value = target.value;
-		if (value) {
-			// Clear credit when debit is entered
-			handleUpdateTransaction(transaction, 'credit_amount', 0);
-		}
-	}
-
-	function formatCurrency(amount: number): string {
-		return amount.toFixed(2);
-	}
 
 	async function handleExport() {
 		if (!ledger) return;
@@ -204,7 +282,75 @@
 	}
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+<style>
+	/* Custom checkbox styling for better visibility */
+	input[type="checkbox"] {
+		appearance: none;
+		-webkit-appearance: none;
+		background-color: white;
+		border: 2px solid #d1d5db;
+		border-radius: 4px;
+		display: inline-block;
+		position: relative;
+		cursor: pointer;
+	}
+
+	input[type="checkbox"]:checked {
+		background-color: #2563eb;
+		border-color: #2563eb;
+	}
+
+	input[type="checkbox"]:checked::after {
+		content: '';
+		position: absolute;
+		left: 5px;
+		top: 2px;
+		width: 5px;
+		height: 10px;
+		border: solid white;
+		border-width: 0 2px 2px 0;
+		transform: rotate(45deg);
+	}
+
+	input[type="checkbox"]:focus {
+		outline: none;
+		box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.5);
+	}
+
+	input[type="checkbox"]:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+
+	/* Monospace font for numbers */
+	.amount-cell, .balance-cell {
+		font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+		font-size: 0.875rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Debit styling with parentheses outside flow using absolute positioning */
+	.debit-wrapper {
+		position: relative;
+		display: inline-block;
+		color: #dc2626; /* red-600 */
+	}
+	.debit-wrapper::before {
+		content: '(';
+		position: absolute;
+		right: 100%;
+		color: #dc2626;
+	}
+	.debit-wrapper::after {
+		content: ')';
+		position: absolute;
+		left: 100%;
+		color: #dc2626;
+	}
+
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4" on:click={clearSelection}>
 	<div class="max-w-7xl mx-auto">
 		{#if isLedgerLoading}
 			<div class="flex justify-center items-center py-12">
@@ -284,14 +430,14 @@
 			</div>
 
 			<!-- Transaction Table -->
-			<div class="bg-white rounded-lg shadow-xl overflow-x-auto">
+			<div class="bg-white rounded-lg shadow-xl overflow-x-auto" on:click|stopPropagation>
 				<table class="w-full">
 					<thead class="bg-gray-50 border-b-2 border-gray-200">
 						<tr>
+							<th class="w-8 px-2 py-3"></th><!-- Drag handle column -->
 							<th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Date</th>
 							<th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Description</th>
-							<th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Credit (+)</th>
-							<th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Debit (-)</th>
+							<th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Amount</th>
 							<th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Balance</th>
 							<th class="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Paid</th>
 							<th class="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">Cleared</th>
@@ -300,111 +446,203 @@
 					</thead>
 					<tbody>
 						<!-- Starting Balance Row -->
-						<tr class="bg-blue-50 border-b border-gray-200 font-semibold">
-							<td class="px-4 py-3">
-								<input
-									type="date"
-									value={startingBalanceDate}
-									disabled={ledger.is_locked}
-									on:change={(e) => handleStartingDateChange(e.currentTarget.value)}
-									class="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-								/>
+						<tr
+							class="border-b border-gray-200 font-semibold {selectedRowId === 0 ? 'bg-blue-50' : 'bg-blue-50'} {selectedRowId !== 0 ? 'hover:bg-blue-100' : ''}"
+							on:click={() => { selectedRowId = 0; }}
+						>
+							<td class="px-2 py-3"></td><!-- Empty drag handle cell -->
+							<!-- Date -->
+							<td class="px-4 py-3 cursor-pointer" on:click|stopPropagation={() => { selectedRowId = 0; selectedCell = 'date'; }}>
+								{#if selectedRowId === 0 && selectedCell === 'date' && !ledger.is_locked}
+									<input
+										type="date"
+										value={startingBalanceDate}
+										on:blur={(e) => { handleStartingDateChange(e.currentTarget.value); selectedCell = null; }}
+										on:keydown={(e) => e.key === 'Escape' && (selectedCell = null)}
+										class="w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+									/>
+								{:else}
+									<span class="block px-2 py-1 text-sm {!ledger.is_locked ? 'hover:bg-blue-100 rounded' : ''}">
+										{startingBalanceDate}
+									</span>
+								{/if}
 							</td>
+							<!-- Description (not editable) -->
 							<td class="px-4 py-3 text-gray-700">Starting Balance</td>
-							<td class="px-4 py-3"></td>
-							<td class="px-4 py-3"></td>
-							<td class="px-4 py-3 text-right">
-								<input
-									type="number"
-									step="0.01"
-									value={startingBalance}
-									disabled={ledger.is_locked}
-									on:blur={(e) => handleStartingBalanceChange(e.currentTarget.value)}
-									class="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right disabled:bg-gray-100 disabled:cursor-not-allowed"
-								/>
+							<!-- Amount -->
+							<td class="px-4 py-3 text-right amount-cell cursor-pointer" on:click|stopPropagation={() => { selectedRowId = 0; selectedCell = 'amount'; }}>
+								{#if selectedRowId === 0 && selectedCell === 'amount' && !ledger.is_locked}
+									<input
+										type="number"
+										step="1"
+										value={Math.round(startingBalance)}
+										on:blur={(e) => { handleStartingBalanceChange(e.currentTarget.value); selectedCell = null; }}
+										on:keydown={(e) => { if (e.key === 'Escape') selectedCell = null; if (e.key === 'Enter') { handleStartingBalanceChange(e.currentTarget.value); selectedCell = null; } }}
+										class="w-24 px-2 py-1 border border-blue-500 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+									/>
+								{:else}
+									<span class="block px-2 py-1 text-right {!ledger.is_locked ? 'hover:bg-blue-100 rounded' : ''}">
+										${Math.round(startingBalance)}
+									</span>
+								{/if}
 							</td>
+							<!-- Balance -->
+							<td class="px-4 py-3 text-right balance-cell">${Math.round(startingBalance)}</td>
 							<td class="px-4 py-3"></td>
 							<td class="px-4 py-3"></td>
 							<td class="px-4 py-3"></td>
 						</tr>
 
 						<!-- Transaction Rows -->
-						{#each transactionsWithBalance as transaction (transaction.id)}
-							<tr class="border-b border-gray-200 hover:bg-gray-50">
-								<td class="px-4 py-3">
-									<input
-										type="date"
-										value={transaction.date}
-										disabled={ledger.is_locked}
-										on:blur={(e) => handleUpdateTransaction(transaction, 'date', e.currentTarget.value)}
-										class="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-									/>
+						{#each transactionsWithBalance as transaction, index (transaction.id)}
+							{@const balance = formatBalance(transaction.runningBalance)}
+							{@const amount = formatAmount(transaction.credit_amount, transaction.debit_amount)}
+							{@const runningBal = typeof transaction.runningBalance === 'string' ? parseFloat(transaction.runningBalance) : transaction.runningBalance}
+							{@const isNegativeBalance = runningBal < 0}
+							<tr
+								class="border-b border-gray-200 {selectedRowId === transaction.id ? 'bg-blue-50' : isNegativeBalance ? 'bg-red-50' : 'bg-white'} {selectedRowId !== transaction.id ? 'hover:bg-gray-100' : ''} {draggedIndex === index ? 'opacity-50' : ''} {dragOverIndex === index ? 'border-t-2 border-t-blue-500' : ''}"
+								on:click={() => { selectedRowId = transaction.id; }}
+								on:dragover={(e) => handleDragOver(e, index)}
+								on:dragleave={handleDragLeave}
+								on:drop={(e) => handleDrop(e, index)}
+							>
+								<!-- Drag Handle -->
+								<td
+									class="px-2 py-3 cursor-grab text-gray-400 hover:text-gray-600 {ledger?.is_locked ? 'cursor-not-allowed opacity-50' : ''}"
+									draggable={!ledger?.is_locked}
+									on:dragstart={(e) => handleDragStart(e, index)}
+									on:dragend={handleDragEnd}
+								>
+									<svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+										<circle cx="9" cy="5" r="1.5" />
+										<circle cx="15" cy="5" r="1.5" />
+										<circle cx="9" cy="12" r="1.5" />
+										<circle cx="15" cy="12" r="1.5" />
+										<circle cx="9" cy="19" r="1.5" />
+										<circle cx="15" cy="19" r="1.5" />
+									</svg>
 								</td>
-								<td class="px-4 py-3">
-									<input
-										type="text"
-										value={transaction.description}
-										disabled={ledger.is_locked}
-										on:blur={(e) => handleUpdateTransaction(transaction, 'description', e.currentTarget.value)}
-										class="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-									/>
+								<!-- Date -->
+								<td class="px-4 py-3 cursor-pointer" on:click|stopPropagation={() => { selectedRowId = transaction.id; selectedCell = 'date'; }}>
+									{#if selectedRowId === transaction.id && selectedCell === 'date' && !ledger.is_locked}
+										<input
+											type="date"
+											value={transaction.date}
+											on:blur={(e) => { handleUpdateTransaction(transaction, 'date', e.currentTarget.value); selectedCell = null; }}
+											on:keydown={(e) => e.key === 'Escape' && (selectedCell = null)}
+											class="w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+										/>
+									{:else}
+										<span class="block px-2 py-1 text-sm {!ledger.is_locked ? 'hover:bg-gray-200 rounded' : ''}">
+											{transaction.date}
+										</span>
+									{/if}
 								</td>
-								<td class="px-4 py-3 text-right">
-									<input
-										type="number"
-										step="0.01"
-										min="0"
-										value={transaction.credit_amount > 0 ? transaction.credit_amount : ''}
-										disabled={ledger.is_locked}
-										on:input={(e) => handleCreditInput(e, transaction)}
-										on:blur={(e) => handleUpdateTransaction(transaction, 'credit_amount', parseFloat(e.currentTarget.value) || 0)}
-										class="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right disabled:bg-gray-100 disabled:cursor-not-allowed"
-									/>
+								<!-- Description -->
+								<td class="px-4 py-3 cursor-pointer" on:click|stopPropagation={() => { selectedRowId = transaction.id; selectedCell = 'description'; }}>
+									{#if selectedRowId === transaction.id && selectedCell === 'description' && !ledger.is_locked}
+										<input
+											type="text"
+											value={transaction.description}
+											on:blur={(e) => { handleUpdateTransaction(transaction, 'description', e.currentTarget.value); selectedCell = null; }}
+											on:keydown={(e) => { if (e.key === 'Escape') selectedCell = null; if (e.key === 'Enter') { handleUpdateTransaction(transaction, 'description', e.currentTarget.value); selectedCell = null; } }}
+											class="w-full px-2 py-1 border border-blue-500 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+										/>
+									{:else}
+										<span class="block px-2 py-1 text-sm {!ledger.is_locked ? 'hover:bg-gray-200 rounded' : ''}">
+											{transaction.description}
+										</span>
+									{/if}
 								</td>
-								<td class="px-4 py-3 text-right">
-									<input
-										type="number"
-										step="0.01"
-										min="0"
-										value={transaction.debit_amount > 0 ? transaction.debit_amount : ''}
-										disabled={ledger.is_locked}
-										on:input={(e) => handleDebitInput(e, transaction)}
-										on:blur={(e) => handleUpdateTransaction(transaction, 'debit_amount', parseFloat(e.currentTarget.value) || 0)}
-										class="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right disabled:bg-gray-100 disabled:cursor-not-allowed"
-									/>
+								<!-- Amount (combined credit/debit) -->
+								<td class="px-4 py-3 text-right amount-cell cursor-pointer" on:click|stopPropagation={() => { selectedRowId = transaction.id; selectedCell = 'amount'; }}>
+									{#if selectedRowId === transaction.id && selectedCell === 'amount' && !ledger.is_locked}
+										<input
+											type="number"
+											step="1"
+											value={transaction.debit_amount > 0 ? -Math.round(parseFloat(transaction.debit_amount.toString())) : Math.round(parseFloat(transaction.credit_amount.toString())) || ''}
+											on:blur={(e) => {
+												const val = Math.round(parseFloat(e.currentTarget.value) || 0);
+												if (val < 0) {
+													handleUpdateTransaction(transaction, 'debit_amount', Math.abs(val));
+													handleUpdateTransaction(transaction, 'credit_amount', 0);
+												} else {
+													handleUpdateTransaction(transaction, 'credit_amount', val);
+													handleUpdateTransaction(transaction, 'debit_amount', 0);
+												}
+												selectedCell = null;
+											}}
+											on:keydown={(e) => {
+												if (e.key === 'Escape') selectedCell = null;
+												if (e.key === 'Enter') {
+													const val = Math.round(parseFloat(e.currentTarget.value) || 0);
+													if (val < 0) {
+														handleUpdateTransaction(transaction, 'debit_amount', Math.abs(val));
+														handleUpdateTransaction(transaction, 'credit_amount', 0);
+													} else {
+														handleUpdateTransaction(transaction, 'credit_amount', val);
+														handleUpdateTransaction(transaction, 'debit_amount', 0);
+													}
+													selectedCell = null;
+												}
+											}}
+											class="w-24 px-2 py-1 border border-blue-500 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+										/>
+									{:else}
+										<span class="block px-2 py-1 text-right {!ledger.is_locked ? 'hover:bg-gray-200 rounded' : ''}">
+											{#if amount.text}
+												{#if amount.isDebit}
+													<span class="debit-wrapper">${amount.text}</span>
+												{:else}
+													${amount.text}
+												{/if}
+											{/if}
+										</span>
+									{/if}
 								</td>
-								<td class="px-4 py-3 text-right font-semibold">
-									${formatCurrency(transaction.runningBalance)}
+								<!-- Balance -->
+								<td class="px-4 py-3 text-right font-semibold balance-cell">
+									{#if balance.isNegative}
+										<span class="debit-wrapper">{balance.text}</span>
+									{:else}
+										{balance.text}
+									{/if}
 								</td>
+								<!-- Paid checkbox -->
 								<td class="px-4 py-3 text-center">
 									<input
 										type="checkbox"
 										checked={transaction.is_paid}
 										disabled={ledger.is_locked}
 										on:change={() => handleTogglePaid(transaction.id)}
-										class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:cursor-not-allowed"
+										on:click|stopPropagation
+										class="w-5 h-5 cursor-pointer"
 									/>
 								</td>
+								<!-- Cleared checkbox -->
 								<td class="px-4 py-3 text-center">
 									<input
 										type="checkbox"
 										checked={transaction.is_cleared}
 										disabled={ledger.is_locked}
 										on:change={() => handleToggleCleared(transaction.id)}
-										class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:cursor-not-allowed"
+										on:click|stopPropagation
+										class="w-5 h-5 cursor-pointer"
 									/>
 								</td>
+								<!-- Actions (trash only on selected row) -->
 								<td class="px-4 py-3 text-center">
-									<button
-										on:click={() => handleDeleteTransaction(transaction.id)}
-										disabled={ledger.is_locked}
-										class="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed"
-										title="Delete"
-									>
-										<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-											<path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-										</svg>
-									</button>
+									{#if selectedRowId === transaction.id && !ledger.is_locked}
+										<button
+											on:click|stopPropagation={() => handleDeleteTransaction(transaction.id)}
+											class="text-red-600 hover:text-red-800"
+											title="Delete"
+										>
+											<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+												<path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+											</svg>
+										</button>
+									{/if}
 								</td>
 							</tr>
 						{/each}
@@ -412,6 +650,7 @@
 						<!-- Add New Transaction Row -->
 						{#if !ledger.is_locked}
 							<tr class="bg-green-50 border-b-2 border-green-200">
+								<td class="px-2 py-3"></td><!-- Empty drag handle cell -->
 								<td class="px-4 py-3">
 									<input
 										type="date"
@@ -428,26 +667,14 @@
 										class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
 									/>
 								</td>
-								<td class="px-4 py-3 text-right">
+								<td class="px-4 py-3 text-right amount-cell">
 									<input
 										type="number"
-										step="0.01"
-										min="0"
-										bind:value={newCredit}
-										on:input={() => { if (newCredit) newDebit = ''; }}
+										step="1"
+										bind:value={newAmount}
+										placeholder="+/- amount"
 										on:keypress={(e) => e.key === 'Enter' && handleAddTransaction()}
-										class="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right"
-									/>
-								</td>
-								<td class="px-4 py-3 text-right">
-									<input
-										type="number"
-										step="0.01"
-										min="0"
-										bind:value={newDebit}
-										on:input={() => { if (newDebit) newCredit = ''; }}
-										on:keypress={(e) => e.key === 'Enter' && handleAddTransaction()}
-										class="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right"
+										class="w-28 px-2 py-1 border border-gray-300 rounded text-sm text-right font-mono"
 									/>
 								</td>
 								<td class="px-4 py-3"></td>
@@ -456,7 +683,7 @@
 								<td class="px-4 py-3 text-center">
 									<button
 										on:click={handleAddTransaction}
-										disabled={!newDescription.trim() || (!newCredit && !newDebit)}
+										disabled={!newDescription.trim() || !newAmount}
 										class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
 									>
 										Add
@@ -467,10 +694,22 @@
 
 						<!-- Totals Row -->
 						<tr class="bg-gray-100 border-t-2 border-gray-300 font-bold">
+							<td class="px-2 py-3"></td><!-- Empty drag handle cell -->
 							<td class="px-4 py-3" colspan="2">Totals</td>
-							<td class="px-4 py-3 text-right">${formatCurrency(totalCredit)}</td>
-							<td class="px-4 py-3 text-right">${formatCurrency(totalDebit)}</td>
-							<td class="px-4 py-3 text-right">${formatCurrency(finalBalance)}</td>
+							<td class="px-4 py-3 text-right amount-cell">
+								{#if netAmount < 0}
+									<span class="debit-wrapper">${Math.round(Math.abs(netAmount))}</span>
+								{:else}
+									${Math.round(netAmount)}
+								{/if}
+							</td>
+							<td class="px-4 py-3 text-right balance-cell">
+								{#if finalBalanceFormatted.isNegative}
+									<span class="debit-wrapper">{finalBalanceFormatted.text}</span>
+								{:else}
+									{finalBalanceFormatted.text}
+								{/if}
+							</td>
 							<td class="px-4 py-3"></td>
 							<td class="px-4 py-3"></td>
 							<td class="px-4 py-3"></td>

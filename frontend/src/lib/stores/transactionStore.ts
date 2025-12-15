@@ -33,12 +33,8 @@ function createTransactionStore() {
 			update(state => ({ ...state, isLoading: true, error: null, ledgerId }));
 			try {
 				const response = await transactionsApi.list(ledgerId);
-				// Sort by date, then sort_order
-				const sorted = response.transactions.sort((a, b) => {
-					const dateCompare = a.date.localeCompare(b.date);
-					if (dateCompare !== 0) return dateCompare;
-					return a.sort_order - b.sort_order;
-				});
+				// Sort by sort_order only (user controls order via drag and drop)
+				const sorted = response.transactions.sort((a, b) => a.sort_order - b.sort_order);
 				update(state => ({
 					...state,
 					transactions: sorted,
@@ -84,11 +80,7 @@ function createTransactionStore() {
 
 				update(state => ({
 					...state,
-					transactions: [...state.transactions, response.transaction].sort((a, b) => {
-						const dateCompare = a.date.localeCompare(b.date);
-						if (dateCompare !== 0) return dateCompare;
-						return a.sort_order - b.sort_order;
-					}),
+					transactions: [...state.transactions, response.transaction].sort((a, b) => a.sort_order - b.sort_order),
 					isLoading: false,
 				}));
 
@@ -124,11 +116,7 @@ function createTransactionStore() {
 					...state,
 					transactions: state.transactions.map(t =>
 						t.id === id ? response.transaction : t
-					).sort((a, b) => {
-						const dateCompare = a.date.localeCompare(b.date);
-						if (dateCompare !== 0) return dateCompare;
-						return a.sort_order - b.sort_order;
-					}),
+					).sort((a, b) => a.sort_order - b.sort_order),
 				}));
 				return response.transaction;
 			} catch (error) {
@@ -157,6 +145,54 @@ function createTransactionStore() {
 					...state,
 					error: errorMessage,
 				}));
+				throw error;
+			}
+		},
+
+		/**
+		 * Reorder transactions (for drag and drop)
+		 * Updates sort_order for all affected transactions
+		 */
+		async reorderTransactions(fromIndex: number, toIndex: number): Promise<void> {
+			const currentState = get(store);
+			const transactions = [...currentState.transactions];
+
+			// Remove the item from its original position
+			const [movedItem] = transactions.splice(fromIndex, 1);
+			// Insert it at the new position
+			transactions.splice(toIndex, 0, movedItem);
+
+			// Update sort_order for all transactions
+			const updatedTransactions = transactions.map((t, index) => ({
+				...t,
+				sort_order: index,
+			}));
+
+			// Optimistically update the UI
+			update(state => ({
+				...state,
+				transactions: updatedTransactions,
+			}));
+
+			// Persist the changes to the backend
+			try {
+				// Update each transaction's sort_order
+				await Promise.all(
+					updatedTransactions.map((t, index) =>
+						transactionsApi.update(t.id, { sort_order: index })
+					)
+				);
+			} catch (error) {
+				// Revert on error by reloading
+				const errorMessage = error instanceof ApiError ? error.message : 'Failed to reorder transactions';
+				update(state => ({
+					...state,
+					error: errorMessage,
+				}));
+				// Reload to get correct order from server
+				if (currentState.ledgerId) {
+					await this.loadTransactions(currentState.ledgerId);
+				}
 				throw error;
 			}
 		},
