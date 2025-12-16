@@ -10,15 +10,15 @@
 </script>
 
 <div
-    class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4"
+    class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-2 sm:p-4"
 >
     <div class="max-w-2xl w-full">
-        <div class="bg-white rounded-lg shadow-xl p-8">
-            <div class="text-center mb-8">
-                <h1 class="text-4xl font-bold text-gray-900 mb-2">
+        <div class="bg-white rounded-lg shadow-xl p-4 sm:p-8">
+            <div class="text-center mb-6 sm:mb-8">
+                <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">
                     Welcome to Budgie
                 </h1>
-                <p class="text-xl text-gray-600">Personal Finance Ledger</p>
+                <p class="text-lg sm:text-xl text-gray-600">Personal Finance Ledger</p>
             </div>
 
             <div class="space-y-6">
@@ -32,7 +32,7 @@
                     </p>
                 </div>
 
-                <div class="grid md:grid-cols-2 gap-4">
+                <div class="grid sm:grid-cols-2 gap-3 sm:gap-4">
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <h3 class="font-semibold text-gray-900 mb-2">
                             Frontend
@@ -114,10 +114,10 @@
                             </p>
                             <p class="text-sm text-gray-500">{user.email}</p>
                         </div>
-                        <div class="flex gap-4 justify-center">
+                        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                             <a
                                 href="{base}/ledgers"
-                                class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                                class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                             >
                                 Go to Ledgers
                             </a>
@@ -130,16 +130,16 @@
                         </div>
                     </div>
                 {:else}
-                    <div class="flex gap-4 justify-center pt-4 border-t">
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4 border-t">
                         <a
                             href="{base}/login"
-                            class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                            class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
                         >
                             Login
                         </a>
                         <a
                             href="{base}/register"
-                            class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+                            class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center"
                         >
                             Register
                         </a>

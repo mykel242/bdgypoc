@@ -151,29 +151,29 @@
 	}
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-2 sm:p-4">
 	<div class="max-w-6xl mx-auto">
 		<!-- Header -->
-		<div class="bg-white rounded-lg shadow-xl p-6 mb-6">
-			<div class="flex items-center justify-between mb-4">
+		<div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 mb-4 sm:mb-6">
+			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
 				<div>
-					<h1 class="text-3xl font-bold text-gray-900">My Ledgers</h1>
+					<h1 class="text-2xl sm:text-3xl font-bold text-gray-900">My Ledgers</h1>
 					{#if $authStore.user}
-						<p class="text-gray-600 mt-1">
+						<p class="text-sm sm:text-base text-gray-600 mt-1">
 							Manage your financial ledgers, {$authStore.user.first_name}
 						</p>
 					{/if}
 				</div>
-				<div class="flex gap-3">
+				<div class="flex flex-wrap gap-2 sm:gap-3">
 					<button
 						on:click={handleToggleShowArchived}
-						class="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+						class="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
 					>
 						{$ledgerStore.showArchived ? 'Hide Archived' : 'Show Archived'}
 					</button>
 					<button
 						on:click={handleImportClick}
-						class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium flex items-center gap-2"
+						class="px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium flex items-center gap-1 sm:gap-2 text-sm"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -182,7 +182,7 @@
 					</button>
 					<button
 						on:click={handleCreateNew}
-						class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+						class="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
 					>
 						+ New Ledger
 					</button>
@@ -237,13 +237,13 @@
 			</div>
 		{:else}
 			<!-- Ledger Grid -->
-			<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
 				{#each $ledgerStore.ledgers as ledger (ledger.id)}
 					<div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
 						<!-- Ledger Header (Clickable) -->
-						<a href="{base}/ledgers/{ledger.id}" class="block p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors">
+						<a href="{base}/ledgers/{ledger.id}" class="block p-4 sm:p-6 border-b border-gray-200 hover:bg-gray-50 transition-colors">
 							<div class="flex items-start justify-between mb-2">
-								<h3 class="text-xl font-bold text-gray-900 flex-1 mr-2">
+								<h3 class="text-lg sm:text-xl font-bold text-gray-900 flex-1 mr-2">
 									{ledger.name}
 								</h3>
 								<div class="flex gap-1">
@@ -264,26 +264,26 @@
 									{/if}
 								</div>
 							</div>
-							<p class="text-2xl font-bold text-blue-600">
+							<p class="text-xl sm:text-2xl font-bold text-blue-600">
 								{formatCurrency(ledger.current_balance ?? ledger.starting_balance)}
 							</p>
-							<p class="text-sm text-gray-500 mt-1">
+							<p class="text-xs sm:text-sm text-gray-500 mt-1">
 								{ledger.transaction_count || 0} transaction{ledger.transaction_count === 1 ? '' : 's'}
 							</p>
 						</a>
 
 						<!-- Actions -->
-						<div class="p-4 bg-gray-50 flex flex-wrap gap-2">
+						<div class="p-3 sm:p-4 bg-gray-50 flex flex-wrap gap-2">
 							<button
 								on:click={() => handleEdit(ledger)}
 								disabled={ledger.is_locked && !$ledgerStore.isLoading}
-								class="flex-1 px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+								class="flex-1 px-2 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								Edit
 							</button>
 							<button
 								on:click={() => handleCopy(ledger)}
-								class="flex-1 px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+								class="flex-1 px-2 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
 							>
 								Copy
 							</button>

@@ -173,12 +173,12 @@
 	}
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-2 sm:p-4">
 	<div class="max-w-md w-full">
-		<div class="bg-white rounded-lg shadow-xl p-8">
+		<div class="bg-white rounded-lg shadow-xl p-4 sm:p-8">
 			<!-- Header -->
-			<div class="text-center mb-8">
-				<h1 class="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+			<div class="text-center mb-6 sm:mb-8">
+				<h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
 				<p class="text-gray-600">Get started with Budgie</p>
 			</div>
 
