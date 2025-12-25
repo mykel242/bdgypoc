@@ -13,6 +13,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  is_admin: boolean;
   created_at?: string;
 }
 
@@ -145,6 +146,16 @@ export const auth = {
    */
   async me(): Promise<{ user: User }> {
     return apiFetch<{ user: User }>("/api/auth/me");
+  },
+
+  /**
+   * Change password
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
   },
 };
 
@@ -404,6 +415,67 @@ export const transactions = {
   async toggleCleared(id: number): Promise<TransactionResponse> {
     return apiFetch<TransactionResponse>(`/api/transactions/${id}/toggle-cleared`, {
       method: "POST",
+    });
+  },
+};
+
+/**
+ * Admin Interfaces
+ */
+export interface Backup {
+  filename: string;
+  size: number;
+  created_at: string;
+  modified_at: string;
+}
+
+export interface BackupListResponse {
+  backups: Backup[];
+  count: number;
+}
+
+export interface BackupCreateResponse {
+  message: string;
+  backup: {
+    filename: string;
+    size: number;
+    created_at: string;
+  };
+}
+
+/**
+ * Admin API (requires admin privileges)
+ */
+export const admin = {
+  /**
+   * List all backups
+   */
+  async listBackups(): Promise<BackupListResponse> {
+    return apiFetch<BackupListResponse>("/api/admin/backups");
+  },
+
+  /**
+   * Create a new backup
+   */
+  async createBackup(): Promise<BackupCreateResponse> {
+    return apiFetch<BackupCreateResponse>("/api/admin/backups", {
+      method: "POST",
+    });
+  },
+
+  /**
+   * Get backup download URL
+   */
+  getBackupDownloadUrl(filename: string): string {
+    return `/api/admin/backups/${encodeURIComponent(filename)}`;
+  },
+
+  /**
+   * Delete a backup
+   */
+  async deleteBackup(filename: string): Promise<{ message: string }> {
+    return apiFetch<{ message: string }>(`/api/admin/backups/${encodeURIComponent(filename)}`, {
+      method: "DELETE",
     });
   },
 };

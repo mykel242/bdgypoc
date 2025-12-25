@@ -175,6 +175,29 @@ function createAuthStore() {
 				isLoading: false,
 				error: null
 			});
+		},
+
+		/**
+		 * Change user password
+		 */
+		async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+			try {
+				update(state => ({ ...state, isLoading: true, error: null }));
+				await authApi.changePassword(currentPassword, newPassword);
+				update(state => ({ ...state, isLoading: false, error: null }));
+			} catch (error) {
+				const errorMessage = error instanceof ApiError
+					? error.message
+					: 'Failed to change password';
+
+				update(state => ({
+					...state,
+					isLoading: false,
+					error: errorMessage
+				}));
+
+				throw error;
+			}
 		}
 	};
 }

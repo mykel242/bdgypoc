@@ -153,6 +153,7 @@ router.post('/login', loginValidation, async (req, res) => {
 				email: user.email,
 				first_name: user.first_name,
 				last_name: user.last_name,
+				is_admin: user.is_admin,
 			},
 		});
 	} catch (error) {
@@ -201,6 +202,7 @@ router.get('/me', requireAuth, async (req, res) => {
 				email: user.email,
 				first_name: user.first_name,
 				last_name: user.last_name,
+				is_admin: user.is_admin,
 				created_at: user.created_at,
 			},
 		});
@@ -225,6 +227,72 @@ router.get('/check', (req, res) => {
 	} else {
 		res.json({
 			authenticated: false,
+		});
+	}
+});
+
+// Password validation for change password
+const changePasswordValidation = [
+	body('current_password')
+		.notEmpty()
+		.withMessage('Current password is required'),
+	body('new_password')
+		.isLength({ min: 8 })
+		.withMessage('New password must be at least 8 characters long')
+		.matches(/[A-Z]/)
+		.withMessage('New password must contain at least one uppercase letter')
+		.matches(/[a-z]/)
+		.withMessage('New password must contain at least one lowercase letter')
+		.matches(/[0-9]/)
+		.withMessage('New password must contain at least one number'),
+];
+
+// POST /api/auth/change-password - Change user's password
+router.post('/change-password', requireAuth, changePasswordValidation, async (req, res) => {
+	try {
+		// Check validation errors
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(400).json({
+				error: 'Validation failed',
+				details: errors.array(),
+			});
+		}
+
+		const { current_password, new_password } = req.body;
+
+		// Get current user
+		const user = await User.findByPk(req.session.userId);
+
+		if (!user) {
+			return res.status(404).json({
+				error: 'User not found',
+				message: 'Your user account no longer exists',
+			});
+		}
+
+		// Verify current password
+		const isCurrentPasswordValid = await user.validatePassword(current_password);
+
+		if (!isCurrentPasswordValid) {
+			return res.status(401).json({
+				error: 'Authentication failed',
+				message: 'Current password is incorrect',
+			});
+		}
+
+		// Update password (will be hashed by beforeUpdate hook)
+		user.password_hash = new_password;
+		await user.save();
+
+		res.json({
+			message: 'Password changed successfully',
+		});
+	} catch (error) {
+		console.error('Change password error:', error);
+		res.status(500).json({
+			error: 'Internal server error',
+			message: 'Failed to change password',
 		});
 	}
 });

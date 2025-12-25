@@ -42,6 +42,9 @@ cookies.txt
 # Database backups
 backups/
 
+# SSL certificates
+deploy/ssl/
+
 # Claude AI
 .claude/
 

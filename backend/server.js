@@ -73,6 +73,7 @@ app.use(session({
 const authRoutes = require('./routes/auth');
 const ledgerRoutes = require('./routes/ledgers');
 const transactionRoutes = require('./routes/transactions');
+const adminRoutes = require('./routes/admin');
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -122,6 +123,7 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/ledgers', ledgerRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {

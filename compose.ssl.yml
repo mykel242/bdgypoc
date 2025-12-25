@@ -1,0 +1,15 @@
+# SSL Compose Override
+# Usage: podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml up -d
+#
+# Prerequisites:
+#   1. Generate SSL certificate: ./deploy/generate-ssl-cert.sh your-domain.com
+#   2. Ensure deploy/ssl/budgie.crt and deploy/ssl/budgie.key exist
+
+services:
+  nginx:
+    volumes:
+      - ./deploy/nginx-ssl.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "${BUDGIE_PORT:-443}:443"
+      - "80:80"
