@@ -25,6 +25,8 @@ services:
     volumes:
       # In production, don't mount source code
       - backend_node_modules:/app/node_modules
+      # Mount backups directory to persist database backups
+      - ./backups:/app/backups
     restart: unless-stopped
     # Override command to run in production mode
     command: node backend/server.js
