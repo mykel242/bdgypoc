@@ -39,8 +39,8 @@ tmp/
 temp/
 cookies.txt
 
-# Database backups
-backups/
+# Database backups (root level only)
+/backups/
 
 # SSL certificates
 deploy/ssl/
