@@ -27,6 +27,7 @@ Thumbs.db
 dist/
 build/
 .svelte-kit/
+.vite/
 
 # PM2
 .pm2/
