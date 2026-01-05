@@ -4,7 +4,7 @@
 services:
   db:
     environment:
-      POSTGRES_DB: ${DB_NAME:-budgie_production}
+      POSTGRES_DB: ${DB_NAME:-budgie}
       POSTGRES_USER: ${DB_USER:-budgie_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     restart: unless-stopped
@@ -15,7 +15,7 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-budgie_production}
+      DB_NAME: ${DB_NAME:-budgie}
       DB_USER: ${DB_USER:-budgie_user}
       DB_PASSWORD: ${DB_PASSWORD}
       SESSION_SECRET: ${SESSION_SECRET}

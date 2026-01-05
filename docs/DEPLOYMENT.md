@@ -52,16 +52,22 @@ cd /opt/budgie
 
 ### 3. Configure Environment
 
-Create `/opt/budgie/.secrets`:
+Create `/opt/budgie/.env`:
 
 ```bash
-# Database
-DB_NAME=budgie_production
+# Database - IMPORTANT: Always use 'budgie' as DB_NAME (not budgie_dev or budgie_production)
+DB_HOST=db
+DB_PORT=5432
+DB_NAME=budgie
 DB_USER=budgie_user
 DB_PASSWORD=your_secure_database_password_here
 
 # Session (generate with: openssl rand -base64 32)
 SESSION_SECRET=your_secure_session_secret_here
+
+# Environment
+NODE_ENV=production
+PORT=3001
 
 # Frontend URL (used for CORS)
 FRONTEND_URL=http://your-server-hostname
@@ -106,7 +112,7 @@ podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml up -d --bui
 2. Set the user as admin:
 
 ```bash
-podman exec -it budgie-db psql -U budgie_user -d budgie_production \
+podman exec -it budgie-db psql -U budgie_user -d budgie \
   -c "UPDATE users SET is_admin = true WHERE email = 'your@email.com';"
 ```
 
@@ -191,25 +197,28 @@ podman-compose -f compose.yml -f compose.prod.yml up -d --build
 
 **Via Command Line:**
 ```bash
-podman exec budgie-db pg_dump -U budgie_user -d budgie_production \
-  --clean --if-exists > backup_$(date +%Y%m%d).sql
+podman exec budgie-db pg_dump -U budgie_user -d budgie > backup_$(date +%Y%m%d).sql
 ```
 
 **Restore from Backup:**
 ```bash
-podman exec -i budgie-db psql -U budgie_user -d budgie_production < backup.sql
+podman exec -i budgie-db psql -U budgie_user -d budgie < backup.sql
 ```
+
+> **Important**: See [RUNBOOK.md](RUNBOOK.md) for detailed recovery procedures and lessons learned from production incidents.
 
 ### Database Schema Updates
 
 If model changes require schema updates:
 
 ```bash
-podman exec -it budgie-db psql -U budgie_user -d budgie_production
+podman exec -it budgie-db psql -U budgie_user -d budgie
 
 -- Example: Add new column
 ALTER TABLE users ADD COLUMN new_field VARCHAR(100);
 ```
+
+> **Important**: Always update `database/setup.sql` when adding columns, so fresh deployments include the schema change.
 
 ### SSL Certificate Renewal
 
@@ -240,7 +249,7 @@ sudo lsof -i :443
 
 Verify database is healthy:
 ```bash
-podman exec budgie-db pg_isready -U budgie_user -d budgie_production
+podman exec budgie-db pg_isready -U budgie_user -d budgie
 ```
 
 ### Permission Denied Errors
