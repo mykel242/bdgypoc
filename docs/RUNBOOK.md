@@ -128,8 +128,24 @@ consequence by eventually succeeding.
 Both bugs had the same shape: a dependency that existed in compose, was
 translated as ordering, and needed to be a readiness check.
 
-Cold start went from ~31s with two failures to **2.4s fully serialized with
-none**.
+### Confirmed clean, reboot #3
+Verified on a real boot, not a simulated cold start:
+
+```
+12:47:46.894  network  starting
+12:47:47.114  network  finished
+12:47:47.485  db       started
+12:47:49.256  backend  started   <- 1.76s, the pg_isready gate working
+12:47:49.375  frontend started
+12:47:49.492  nginx    started
+```
+
+**2.6s, fully serialized, each unit started exactly once**, no failure lines,
+20/20 checks. Down from ~31s with two failures before the fixes.
+
+Three reboots were needed: #1 found the frontend bug, #2 found the backend
+bug that #1's noise had been hiding, #3 confirmed clean. That is the method
+working — each fix removed a layer and revealed what was underneath.
 
 ### The lesson worth keeping
 **A stack that fails at boot and is rescued by a restart is indistinguishable
