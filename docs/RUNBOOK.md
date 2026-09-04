@@ -32,6 +32,49 @@ This document captures lessons learned from production incidents and provides re
 2. **Single database name**: Always use `budgie` (not `_dev` or `_production` suffixes)
 3. **This runbook**: Document what can go wrong
 
+## Incident: 2026-09-03 - 14-Hour Outage After Power Cut
+
+### What Happened
+1. Power cut; Cronus rebooted at 18:40
+2. `budgie-nginx` failed to start and never recovered
+3. The app was unreachable for ~14 hours; `db`, `backend` and `frontend`
+   were healthy the entire time, behind a front door that wasn't there
+4. **No data was lost** — the 02:00 backup ran normally throughout
+
+### Root Cause
+`compose.ssl.yml` made nginx publish `0.0.0.0:443`. A wildcard bind
+collides with any specific-address bind on the same port. At boot,
+`budgie-containers.service` and `tailscaled` both started at `18:40:09` —
+the same second — and tailscaled won, so rootlessport failed with:
+
+```
+listen tcp 0.0.0.0:443: bind: address already in use
+```
+
+Whichever service started second would have lost. Budgie had simply been
+winning that race on every previous boot.
+
+### Contributing Factor: The Failure Was Announced To Nobody
+The monitoring agent detected it correctly and posted 6 transitions within
+40 seconds of boot — to a Mattermost channel nobody read. An alert going
+somewhere unread is indistinguishable from no alert.
+
+### Prevention Measures Implemented
+1. **Removed TLS entirely** — budgie now binds only port 80, so there is no
+   contested port. See the 2026-09-04 commits.
+2. **Fixed the healthcheck** that had been probing `budgie_dev` (a database
+   that does not exist in production) every 5 seconds for eight months,
+   ~17k FATAL lines a day, while still reporting the container healthy.
+3. **Removed the Mattermost sink.** Alerts now go to the journal. This is
+   honest rather than better: *nothing pushes anymore*. Check with
+   `journalctl --user -u ops-agent-observe.service | grep -E 'failure:|recovery:'`
+
+### Still Open
+Boot ordering is unconstrained — the unit orders only on
+`network-online.target`. Binding one port instead of three makes a
+collision far less likely, but the race itself was not fixed, only made
+irrelevant.
+
 ## Golden Rules
 
 ### NEVER Do These Without Verification
@@ -56,9 +99,15 @@ podman exec budgie-db psql -U budgie_user -d budgie -c "SELECT name, created_at 
 
 ## Recovery Procedures
 
-### Scenario: Can't Log In After Reboot
+### Scenario: App Loads But Has No Data After Reboot
 
-**Symptoms**: App loads but login fails with "Invalid email or password"
+**Symptoms**: The UI comes up but ledgers are empty, or the backend logs
+authentication failures against Postgres.
+
+> Before 2026-09-04 this presented as a failed login ("Invalid email or
+> password"). There is no login now — the app auto-establishes the single
+> user's session — so the same underlying faults surface as missing data or
+> a 500 instead. The diagnostic steps below are unchanged.
 
 **Likely Cause**: Wrong database volume mounted or password mismatch
 
@@ -121,7 +170,7 @@ podman exec budgie-db psql -U budgie_user -d budgie \
 ls -la /mnt/backup/budgie/
 
 # 2. Stop the application
-podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml down
+podman-compose -f compose.yml -f compose.prod.yml down
 
 # 3. Decompress backup if needed
 gunzip /mnt/backup/budgie/budgie_2026-01-04_020000.sql.gz
@@ -134,7 +183,7 @@ sleep 5
 podman exec -i budgie-db psql -U budgie_user -d budgie < /mnt/backup/budgie/budgie_2026-01-04_020000.sql
 
 # 6. Start rest of stack
-podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml up -d
+podman-compose -f compose.yml -f compose.prod.yml up -d
 ```
 
 ### Scenario: Complete Rebuild from Scratch
@@ -147,9 +196,11 @@ podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml up -d
 cp -r /mnt/backup/budgie ~/budgie-backup-emergency
 
 # 2. Stop everything
-podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml down
+podman-compose -f compose.yml -f compose.prod.yml down
 
 # 3. Remove ALL budgie volumes (DESTRUCTIVE!)
+# Note: budgie-backups-prod exists but nothing writes to it. The real backups
+# are on /mnt/backup/budgie/, written by scripts/backup-db.sh.
 podman volume rm budgie-postgres-data-prod budgie-backend-node-modules-prod budgie-backups-prod
 
 # 4. Pull latest code
@@ -175,7 +226,7 @@ EOF
 chmod 600 .env
 
 # 6. Start fresh
-podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml up -d
+podman-compose -f compose.yml -f compose.prod.yml up -d
 
 # 7. If you have a backup to restore, do it now (see restore procedure above)
 ```
@@ -254,7 +305,11 @@ podman run --rm -v SOURCE_VOLUME:/source:ro -v DEST_VOLUME:/dest alpine sh -c "r
 
 ## Contacts and Resources
 
-- GitHub Repository: https://github.com/mykel242/bdgypoc
+- Canonical repository: `forgejo:mykel/budgie.git`
+  (http://cronus.local:3000/mykel/budgie)
+- GitHub: https://github.com/mykel242/bdgypoc — **cold mirror only**, pushed
+  hourly by `ops-mirror.timer`. Do not commit there; it is force-overwritten
+  from Forgejo.
 - Release Branch: `release/0.1`
 - Server: cronus
-- App URL: https://cronus/budgie-v2
+- App URL: http://cronus/budgie-v2 (plain HTTP, no login — see below)
