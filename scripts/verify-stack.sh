@@ -50,6 +50,7 @@ echo
 
 # --- did we actually reboot? -------------------------------------------
 CUR_BOOT=$(cat /proc/sys/kernel/random/boot_id)
+UPTIME_S=$(cut -d' ' -f1 /proc/uptime)
 UPTIME=$(awk '{printf "%d min", $1/60}' /proc/uptime)
 if [ -n "$BASELINE" ] && [ -f "$BASELINE" ]; then
     OLD_BOOT=$(grep '^boot_id=' "$BASELINE" | cut -d= -f2)
@@ -109,6 +110,27 @@ if [ -n "$BASELINE" ] && [ -f "$BASELINE" ]; then
     fi
 else
     note "data: $CUR_FP"
+fi
+
+# --- did it come up cleanly, or come up on the retry? ------------------
+# A stack that failed at boot and was rescued by RestartSec looks identical
+# to a healthy one by every check above. That happened at the 2026-09-04
+# reboot: frontend and nginx both died on unresolvable upstreams and only
+# recovered 30s later. Everything was green by the time anyone looked.
+# Scoped to the first 5 minutes after boot on purpose: a later manual
+# `systemctl stop` also logs "Failed with result" (SIGKILL, 137), so a wider
+# window would cry wolf every time someone restarts something by hand.
+BOOT_EPOCH=$(( $(date +%s) - ${UPTIME_S%%.*} ))
+WINDOW_END=$(date -d "@$(( BOOT_EPOCH + 120 ))" '+%Y-%m-%d %H:%M:%S')
+BOOT_TS=$(date -d "@${BOOT_EPOCH}" '+%Y-%m-%d %H:%M:%S')
+BOOTFAIL=$(journalctl --user --since "$BOOT_TS" --until "$WINDOW_END" --no-pager 2>/dev/null \
+    | grep -E 'budgie-(db|backend|frontend|nginx|network)' \
+    | grep -cE 'Failed with result|host not found in upstream')
+if [ "${BOOTFAIL:-0}" -eq 0 ]; then
+    ok "clean boot — no unit failures in the first 2 min"
+else
+    bad "$BOOTFAIL failure line(s) within 2 min of boot — it restarted its way to healthy"
+    note "journalctl --user --since '$BOOT_TS' --until '$WINDOW_END' | grep -E 'Failed|host not found'"
 fi
 
 # --- backups still scheduled -------------------------------------------

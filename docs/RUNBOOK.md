@@ -76,6 +76,51 @@ Boot ordering is unconstrained — the unit orders only on
 collision far less likely, but the race itself was not fixed, only made
 irrelevant.
 
+## Incident: 2026-09-04 - Boot Race Found by Testing the Reboot
+
+Not an outage — found deliberately, by rebooting to verify the Quadlet
+migration rather than waiting to find out.
+
+### What happened
+`scripts/verify-stack.sh` reported all 19 checks passing after the reboot.
+The boot journal disagreed: `budgie-frontend` and `budgie-nginx` had each
+started **twice**, 30 seconds apart. The app was down for ~30s after boot and
+then rescued by `RestartSec`.
+
+```
+budgie-frontend: [emerg] host not found in upstream "budgie-backend"  -> exit 1
+budgie-nginx:    [emerg] host not found in upstream "budgie-frontend" -> exit 1
+```
+
+### Root cause
+`budgie-frontend.container` was written with no dependencies, on the
+reasoning that a static SvelteKit build is self-contained. Its files are —
+but the nginx config baked into its image proxies `/budgie-v2/api` to
+`budgie-backend:3001`, and **nginx resolves upstream hostnames at
+config-load time, not per request.** Starting before the backend existed,
+it exited immediately. `budgie-nginx` then failed for the same reason one
+level up, because the frontend it proxies to had just died.
+
+### Fix
+`Requires=`/`After=budgie-backend.service` on the frontend, and `RestartSec`
+cut from 30s to 5s on frontend and nginx. Cold start went from ~31s with two
+failures to **0.92s fully serialized with none**.
+
+### The lesson worth keeping
+**A stack that fails at boot and is rescued by a restart is indistinguishable
+from a healthy one, after the fact.** Every state check passed. The only
+evidence was two `Started` lines in the journal.
+
+`verify-stack.sh` now checks for unit failures within 2 minutes of boot, so
+"came up healthy" and "came up healthy on the second attempt" are no longer
+the same answer. The window is deliberately narrow: a later manual
+`systemctl stop` also logs `Failed with result`, and a wider window cries
+wolf.
+
+Corollary for any new container: "it has no volumes and serves static files"
+is not a reason to declare it dependency-free. What matters is whether
+anything in its config resolves a hostname at startup.
+
 ## Golden Rules
 
 ### NEVER Do These Without Verification
