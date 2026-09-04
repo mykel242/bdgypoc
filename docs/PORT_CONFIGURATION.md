@@ -6,25 +6,21 @@ Budgie is designed to work on any port without configuration changes. This docum
 
 ---
 
-## Default Ports
+## Ports
 
-### Development
+There is one deployment and one port. The dev/production split, and the
+macOS 8080 fallback, went away with `podman-compose` on 2026-09-04.
 
-**macOS:**
-- Nginx: Port **8080** (http://localhost:8080/budgie-v2)
-- Reason: Port 80 requires sudo/admin privileges
+| Port | Container | Notes |
+|---|---|---|
+| 80 | `budgie-nginx` | The app. Plain HTTP, declared as `PublishPort=80:80` |
+| 5432 | `budgie-db` | Postgres, exposed on the LAN for direct DB access |
+| — | `budgie-backend` | 3001, internal only, reached through nginx |
+| — | `budgie-frontend` | 80, internal only, reached through nginx |
 
-**Linux:**
-- Nginx: Port **80** (http://localhost/budgie-v2)
-- Reason: Configured automatically by `container-dev.sh`
-
-### Production
-
-- Nginx: Port **80** only, plain HTTP
-- No TLS. Removed 2026-09-04 along with the login flow — see
-  [RUNBOOK.md](RUNBOOK.md). Port 443 is deliberately not claimed: budgie's
-  old `0.0.0.0:443` bind lost a boot race and caused a 14-hour outage.
-- Set via `BUDGIE_PORT=80` in `budgie-containers.service`.
+**443 is deliberately unclaimed.** No TLS is terminated; budgie's old
+`0.0.0.0:443` bind lost a boot race after the 2026-09-03 power cut and kept
+the service down for 14 hours. See [RUNBOOK.md](RUNBOOK.md).
 
 ---
 
@@ -88,187 +84,59 @@ location /api {
 
 The browser only knows about nginx's port, never the internal container ports.
 
-### 4. **Port Configuration via Environment**
+### 4. **The Port Is Fixed in the Quadlet**
 
-The nginx port is configurable:
+Since the move to Quadlet on 2026-09-04 the published port is declared in
+one place, `budgie-nginx.container`:
 
-```yaml
-# compose.yml
-services:
-  nginx:
-    ports:
-      - "${BUDGIE_PORT:-8080}:80"
+```ini
+[Container]
+PublishPort=80:80
 ```
 
-**On Linux,** `container-dev.sh` sets:
-```bash
-export BUDGIE_PORT=80
-```
-
-**On macOS,** it defaults to 8080 (from `:-8080`).
+There is no `BUDGIE_PORT` variable and no override file. Compose's
+`${BUDGIE_PORT:-8080}` indirection is gone along with compose itself.
 
 ---
 
-## Using Custom Ports
+## Changing the Port
 
-### Method 1: Environment Variable (Recommended)
+Edit the `PublishPort=` line in `budgie-nginx.container` (both the installed
+copy in `~/.config/containers/systemd/` and the canonical copy in the
+ops-agent repo at `deploy/quadlet/`), then:
 
 ```bash
-# Use port 3000
-export BUDGIE_PORT=3000
-./container-dev.sh start
-
-# Access at: http://localhost:3000/budgie-v2
+systemctl --user daemon-reload
+systemctl --user restart budgie-nginx.service
 ```
 
-### Method 2: Edit compose.yml
+Because the frontend uses relative paths and the API client uses relative
+URLs, nothing else needs to change — the app works on whatever port nginx
+is published on.
 
-Change the nginx port mapping:
+**Do not publish 443.** Budgie previously bound `0.0.0.0:443`; a wildcard
+bind collides with any specific-address bind on the same port, and after the
+2026-09-03 power cut that lost a boot race and kept budgie down for 14
+hours. It terminates no TLS, so the port buys nothing.
 
-```yaml
-nginx:
-  ports:
-    - "3000:80"  # External:Internal
-```
+### Binding below 1024 as a rootless user
 
-Then restart:
+Budgie runs rootless, so port 80 needs the unprivileged-port floor lowered
+once:
+
 ```bash
-./container-dev.sh restart
+echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/80-unprivileged-ports.conf
+sudo sysctl --system
 ```
 
-### Method 3: Create compose.override.yml
+### Port already in use
 
-For local overrides without committing:
+This is the known failure mode — it is what caused the 2026-09-03 outage:
 
-```yaml
-# compose.override.yml
-services:
-  nginx:
-    ports:
-      - "3000:80"
-```
-
-This file is gitignored, so each environment can have its own configuration.
-
----
-
-## Port Ranges by Use Case
-
-### Development
-- **8080-8090** - Common alternative HTTP ports
-- **3000-3010** - Node.js convention
-- **5000-5010** - Flask/Python convention
-
-### Staging
-- **8000-8099** - Staging environment ports
-
-### Production
-- **80** - HTTP (redirect to HTTPS)
-- **443** - HTTPS (SSL/TLS)
-
----
-
-## Troubleshooting
-
-### Port Already in Use
-
-**Error:**
-```
-Error: bind: address already in use
-```
-
-**Check what's using the port:**
 ```bash
-# macOS/Linux
-lsof -i :8080
-
-# Or
-sudo netstat -tlnp | grep :8080
-```
-
-**Solutions:**
-1. Stop the conflicting process
-2. Use a different port: `BUDGIE_PORT=8081 ./container-dev.sh start`
-
-### Can't Bind to Port 80 on macOS
-
-**Error:**
-```
-rootlessport cannot expose privileged port 80
-```
-
-**Solution:**
-Don't use port 80 on macOS. Use 8080 or higher:
-```bash
-export BUDGIE_PORT=8080
-./container-dev.sh start
-```
-
-### Can't Bind to Port 80 on Linux
-
-**Error:**
-```
-bind: permission denied
-```
-
-**Solution:**
-Run `container-dev.sh` which automatically configures it:
-```bash
-./container-dev.sh start
-# Automatically runs: sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
-```
-
-### Wrong Port After Navigation
-
-**Symptom:**
-After navigating on `localhost:8080`, redirected to `localhost` (missing port).
-
-> Historically this bit hardest on the post-login redirect. There is no login
-> any more, but the same bug appears on any `goto()` that omits `${base}`.
-
-**Cause:**
-Navigation not using `${base}` prefix.
-
-**Fix:**
-All `goto()` calls must use:
-```typescript
-goto(`${base}/path`);  // Not goto('/path')
-```
-
-**Verify:**
-```bash
-grep -r "goto('/" frontend/src/
-# Should return NO results
-```
-
----
-
-## Network Access
-
-### From Same Machine
-```bash
-# macOS
-http://localhost:8080/budgie-v2
-
-# Linux
-http://localhost/budgie-v2
-```
-
-### From Other Machines on Network
-
-Find the host machine's IP:
-```bash
-# macOS
-ipconfig getifaddr en0
-
-# Linux
-ip addr show | grep "inet "
-```
-
-Then access from any device:
-```
-http://192.168.1.100:8080/budgie-v2  # macOS
-http://192.168.1.100/budgie-v2       # Linux (port 80)
+ss -tlnp | grep ':80 '
+podman inspect budgie-nginx --format '{{.State.Error}}'
+journalctl --user -u budgie-nginx.service -n 30
 ```
 
 ---
@@ -303,14 +171,12 @@ const API_URL = 'http://localhost:8080';
 const API_URL = '';  // Empty = same origin
 ```
 
-### 4. **Test on Multiple Ports**
+### 4. **Verify After Changing the Port**
 ```bash
-# Test default
-./container-dev.sh start
-
-# Test custom port
-./container-dev.sh stop
-BUDGIE_PORT=3000 ./container-dev.sh start
+# Edit PublishPort= in budgie-nginx.container, then:
+systemctl --user daemon-reload
+systemctl --user restart budgie-nginx.service
+curl -sSL -o /dev/null -w '%{http_code}\n' http://localhost:<newport>/
 ```
 
 ---
@@ -328,9 +194,10 @@ collides with any other listener on that port, and whichever service starts
 second fails. Bind a specific address instead, or use a port nothing else
 claims.
 
-The unused material is still in the tree — `compose.ssl.yml`,
-`deploy/nginx-ssl.conf`, `deploy/ssl/`, `deploy/generate-ssl-cert.sh` — kept
-so the change is reversible.
+The TLS material (`compose.ssl.yml`, `deploy/nginx-ssl.conf`,
+`generate-ssl-cert.sh`) was deleted on 2026-09-04 along with compose. Only
+the unused self-signed cert under `deploy/ssl/` remains on disk, untracked.
+
 ---
 
 ## Summary
@@ -341,11 +208,8 @@ so the change is reversible.
 - Nginx handles all routing
 - Works on any port: 80, 8080, 3000, etc.
 
-**To change port:**
-```bash
-export BUDGIE_PORT=3000
-./container-dev.sh start
-```
+**To change port:** edit `PublishPort=` in `budgie-nginx.container`,
+`daemon-reload`, restart. Nothing in the app needs to change.
 
 **To verify navigation is port-independent:**
 ```bash

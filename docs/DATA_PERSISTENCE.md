@@ -12,12 +12,10 @@ Budgie uses Docker/Podman **named volumes** to persist database data. This means
 
 The database container mounts a named volume:
 
-```yaml
-# compose.yml
-services:
-  db:
-    volumes:
-      - postgres_data:/var/lib/postgresql/data  # ← Data stored here
+```ini
+# budgie-db.container (Quadlet)
+[Container]
+Volume=budgie-postgres-data-prod:/var/lib/postgresql/data:Z  # ← Data stored here
 
 volumes:
   postgres_data:
@@ -42,9 +40,9 @@ podman volume inspect budgie-postgres-data --format "{{.Mountpoint}}"
 
 | Action | Command | Data Status |
 |--------|---------|-------------|
-| Restart containers | `./container-dev.sh restart` | **Preserved** |
-| Stop containers | `./container-dev.sh stop` | **Preserved** |
-| Rebuild containers | `./container-dev.sh build` | **Preserved** |
+| Restart the stack | `systemctl --user restart budgie-nginx.service` | **Preserved** |
+| Stop the stack | `systemctl --user stop budgie-db.service` | **Preserved** |
+| Rebuild images | `scripts/build-images.sh` | **Preserved** |
 | Remove containers | `podman rm budgie-db` | **Preserved** |
 | Update images | `podman pull postgres:16-alpine` | **Preserved** |
 | Code changes | Edit files + restart | **Preserved** |
@@ -54,9 +52,11 @@ podman volume inspect budgie-postgres-data --format "{{.Mountpoint}}"
 
 | Action | Command | Why |
 |--------|---------|-----|
-| Clean | `./container-dev.sh clean` | Runs `down -v` (removes volumes) |
-| Nuke | `./container-dev.sh nuke` | Removes everything including volumes |
-| Manual delete | `podman volume rm budgie-postgres-data` | Explicit deletion |
+| Manual delete | `podman volume rm budgie-postgres-data-prod` | Explicit deletion — the only way to lose it now |
+
+Compose's `down -v` used to be a one-flag route to deleting the volumes.
+There is no equivalent under Quadlet: stopping units never touches volumes,
+so the data can only go by naming the volume explicitly.
 
 ---
 
@@ -66,8 +66,9 @@ podman volume inspect budgie-postgres-data --format "{{.Mountpoint}}"
 
 **What you do:**
 ```bash
-git pull                    # Get latest code
-./container-dev.sh restart  # Restart containers
+git pull
+scripts/build-images.sh
+systemctl --user restart budgie-backend.service budgie-frontend.service
 ```
 
 **What happens:**
@@ -81,8 +82,8 @@ git pull                    # Get latest code
 
 **What you do:**
 ```bash
-./container-dev.sh build   # Rebuild images
-./container-dev.sh restart # Restart containers
+scripts/build-images.sh
+systemctl --user restart budgie-backend.service budgie-frontend.service
 ```
 
 **What happens:**
@@ -96,8 +97,8 @@ git pull                    # Get latest code
 
 **What you do:**
 ```bash
-./container-dev.sh clean   # Removes volumes
-./container-dev.sh start   # Fresh start
+podman volume rm budgie-postgres-data-prod   # DESTROYS DATA   # Removes volumes
+systemctl --user start budgie-nginx.service   # Fresh start
 ```
 
 **What happens:**
@@ -118,7 +119,7 @@ scp ./backups/budgie_20251125_092704.sql newserver:/opt/budgie/backups/
 
 **On new server:**
 ```bash
-./container-dev.sh start
+systemctl --user start budgie-nginx.service
 ./restore-database.sh ./backups/budgie_20251125_092704.sql
 ```
 
@@ -249,7 +250,7 @@ curl -sS -X POST http://localhost/api/ledgers \
   -d '{"name":"persistence-test","starting_balance":0}'
 
 # 2. Restart containers
-./container-dev.sh restart
+systemctl --user restart budgie-nginx.service
 
 # 3. Verify data still exists
 curl -sS http://localhost/api/ledgers | grep persistence-test
@@ -304,7 +305,7 @@ podman system df -v
 
 ```bash
 # Stop containers first
-./container-dev.sh stop
+systemctl --user stop budgie-nginx.service budgie-backend.service budgie-frontend.service budgie-db.service
 
 # Remove specific volume
 podman volume rm budgie-postgres-data
@@ -339,13 +340,13 @@ This is normal! The volume persists between runs. No action needed.
 **Solution:**
 ```bash
 # 1. Stop containers
-./container-dev.sh stop
+systemctl --user stop budgie-nginx.service budgie-backend.service budgie-frontend.service budgie-db.service
 
 # 2. Remove corrupted volume
 podman volume rm budgie-postgres-data
 
 # 3. Restore from backup
-./container-dev.sh start
+systemctl --user start budgie-nginx.service
 ./restore-database.sh ./backups/budgie_LATEST.sql
 ```
 
@@ -361,7 +362,7 @@ Error: volume is being used
 **Solution:**
 ```bash
 # Stop all containers using the volume
-./container-dev.sh stop
+systemctl --user stop budgie-nginx.service budgie-backend.service budgie-frontend.service budgie-db.service
 
 # Then try again
 podman volume rm budgie-postgres-data
@@ -414,7 +415,7 @@ git pull
 # Sequelize auto-syncs, or run migration script
 
 # 4. Restart
-./container-dev.sh restart
+systemctl --user restart budgie-nginx.service
 
 # 5. If something breaks, restore
 ./restore-database.sh ./backups/budgie_TIMESTAMP.sql
@@ -475,7 +476,7 @@ For production, consider:
 - Container rebuilds
 
 ❌ **Data is deleted by:**
-- `./container-dev.sh clean`
+- `podman volume rm budgie-postgres-data-prod   # DESTROYS DATA`
 - `./container-dev.sh nuke`
 - Manual volume deletion
 
@@ -486,7 +487,7 @@ For production, consider:
 
 # Before risky operations
 ./backup-database.sh
-./container-dev.sh clean  # Now safe!
+podman volume rm budgie-postgres-data-prod   # DESTROYS DATA  # Now safe!
 
 # Restore if needed
 ./restore-database.sh ./backups/budgie_TIMESTAMP.sql

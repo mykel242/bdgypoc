@@ -17,11 +17,16 @@ This guide covers deploying Budgie on a Linux or macOS server using Podman conta
 git clone forgejo:mykel/budgie.git /opt/budgie
 cd /opt/budgie
 
-# Create environment file
-cp .env.example .env  # then edit (see below)
+# Create the podman secrets (see "Configure Credentials" below)
 
-# Start the application
-podman-compose -f compose.yml -f compose.prod.yml up -d --build
+# Install the Quadlet units (canonical copies live in the ops-agent repo)
+cp /media/storage/archive/code/ops-agent/deploy/quadlet/budgie*.{container,network} \
+   ~/.config/containers/systemd/
+
+# Build the local images, then start
+scripts/build-images.sh
+systemctl --user daemon-reload
+systemctl --user start budgie-nginx.service
 ```
 
 ## Detailed Setup
@@ -31,12 +36,12 @@ podman-compose -f compose.yml -f compose.prod.yml up -d --build
 **Ubuntu/Debian:**
 ```bash
 sudo apt update
-sudo apt install podman podman-compose
+sudo apt install podman
 ```
 
 **macOS:**
 ```bash
-brew install podman podman-compose
+brew install podman
 podman machine init
 podman machine start
 ```
@@ -52,31 +57,28 @@ cd /opt/budgie
 
 ### 3. Configure Environment
 
-Create `/opt/budgie/.env`:
+Credentials are **podman secrets**, not a `.env` file. Nothing reads `.env`
+at runtime any more.
 
 ```bash
-# Database - IMPORTANT: Always use 'budgie' as DB_NAME (not budgie_dev or budgie_production)
-DB_HOST=db
-DB_PORT=5432
-DB_NAME=budgie
-DB_USER=budgie_user
-DB_PASSWORD=your_secure_database_password_here
+# Database password — prompted, so it never lands in shell history
+read -rsp 'DB password: ' P && echo && printf '%s' "$P" | podman secret create budgie-db-password - && unset P
 
-# Session (generate with: openssl rand -base64 32)
-SESSION_SECRET=your_secure_session_secret_here
+# Session secret
+openssl rand -base64 32 | tr -d '\n' | podman secret create budgie-session-secret -
 
-# Environment
-NODE_ENV=production
-PORT=3001
-
-# Frontend URL (used for CORS)
-FRONTEND_URL=http://your-server-hostname
+podman secret ls
 ```
 
-Generate a secure session secret:
-```bash
-openssl rand -base64 32
-```
+They are injected into the containers with `type=env`, so the app still
+reads plain `DB_PASSWORD` and `SESSION_SECRET` and needed no code change.
+
+Everything non-secret (`DB_HOST=budgie-db`, `DB_NAME=budgie`, `NODE_ENV`,
+`PORT`, `FRONTEND_URL`) is set directly in `budgie-backend.container`.
+
+The database is **always** named `budgie` — never `budgie_dev` or
+`budgie_production`. That inconsistency caused a data-loss incident; see
+[RUNBOOK.md](RUNBOOK.md).
 
 ### 4. Configure Port Access (Linux Only)
 
@@ -91,8 +93,14 @@ sudo sysctl --system
 
 ```bash
 cd /opt/budgie
-BUDGIE_PORT=80 podman-compose -f compose.yml -f compose.prod.yml up -d --build
+scripts/build-images.sh          # Quadlet cannot build images
+systemctl --user daemon-reload
+systemctl --user start budgie-nginx.service
 ```
+
+`budgie-nginx` `Requires=` backend and frontend, which `Requires=` the
+database, so starting the leaf brings up the whole chain. Cold start takes
+about 30 seconds.
 
 Budgie serves **plain HTTP on port 80 only**. TLS was removed on 2026-09-04;
 see the note at the end of this guide.
@@ -127,52 +135,39 @@ If more than one row somehow exists, the middleware picks the lowest `id`.
 sudo loginctl enable-linger $USER
 ```
 
-### Create Systemd User Service
+### Install the Quadlet Units
 
-Create `~/.config/systemd/user/budgie.service`:
+Budgie has no hand-written systemd unit. Five Quadlet files generate the
+units, and systemd starts them at boot via `WantedBy=default.target`:
 
-```ini
-[Unit]
-Description=Budgie Personal Finance App (Containers)
-After=network-online.target
-Wants=network-online.target
+| File | Unit | Role |
+|---|---|---|
+| `budgie.network` | `budgie-network.service` | Creates `budgie-network` |
+| `budgie-db.container` | `budgie-db.service` | Postgres 16, publishes 5432 |
+| `budgie-backend.container` | `budgie-backend.service` | Node API, no published ports |
+| `budgie-frontend.container` | `budgie-frontend.service` | Static build, no published ports |
+| `budgie-nginx.container` | `budgie-nginx.service` | Reverse proxy, publishes **80 only** |
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/opt/budgie
-Environment=BUDGIE_PORT=80
-ExecStart=/usr/bin/podman-compose -f compose.yml -f compose.prod.yml up -d
-ExecStop=/usr/bin/podman-compose -f compose.yml -f compose.prod.yml down
-TimeoutStartSec=120
+Canonical copies live in the ops-agent repo at `deploy/quadlet/`. Install
+them and reload:
 
-[Install]
-WantedBy=default.target
-```
-
-Do **not** add `-f compose.ssl.yml`. It publishes `0.0.0.0:443`, and a
-wildcard bind collides with any other listener on that port. On 2026-09-03
-that collision lost a boot race and kept budgie down for 14 hours — see
-[RUNBOOK.md](RUNBOOK.md).
-
-The canonical copy of this unit is tracked at
-`deploy/budgie-containers.user.service`; install from there rather than
-retyping it.
-
-Enable and start:
 ```bash
+cp /media/storage/archive/code/ops-agent/deploy/quadlet/budgie*.{container,network} \
+   ~/.config/containers/systemd/
 systemctl --user daemon-reload
-systemctl --user enable budgie.service
-systemctl --user start budgie.service
+systemctl --user start budgie-nginx.service
 ```
+
+Do **not** add a `PublishPort=443`. Budgie's old `0.0.0.0:443` bind lost a
+boot race and caused a 14-hour outage — see [RUNBOOK.md](RUNBOOK.md).
 
 ## Operations
 
 ### Viewing Logs
 
 ```bash
-# All containers
-podman-compose -f compose.yml -f compose.prod.yml logs -f
+# Follow one unit
+journalctl --user -u budgie-backend.service -f
 
 # Specific container
 podman logs budgie-backend
@@ -184,8 +179,11 @@ podman logs budgie-db
 ### Restarting Services
 
 ```bash
-cd /opt/budgie
-podman-compose -f compose.yml -f compose.prod.yml restart
+# The whole stack (Requires= pulls the rest in)
+systemctl --user restart budgie-nginx.service
+
+# One service
+systemctl --user restart budgie-backend.service
 ```
 
 ### Updating the Application
@@ -193,9 +191,13 @@ podman-compose -f compose.yml -f compose.prod.yml restart
 ```bash
 cd /opt/budgie
 git pull
-podman-compose -f compose.yml -f compose.prod.yml down
-podman-compose -f compose.yml -f compose.prod.yml up -d --build
+scripts/build-images.sh
+systemctl --user restart budgie-backend.service budgie-frontend.service
 ```
+
+Nothing rebuilds implicitly any more — compose used to do it on
+`up --build`. If you skip `build-images.sh`, the containers restart happily
+on the old image and nothing reports a problem.
 
 ### Database Backups
 

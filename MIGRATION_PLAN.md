@@ -1,5 +1,14 @@
 # Budgie Web Service Migration Plan
 
+> **HISTORICAL — do not follow.** This documents the 2025 migration from a
+> bare-metal/PM2 setup to `podman-compose`. Budgie has since moved again, to
+> Quadlet units (2026-09-04), and every compose file and `container-dev.sh`
+> referenced below has been deleted. Kept as a record of how budgie got here.
+>
+> Current docs: [readme.md](readme.md), [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md),
+> [docs/RUNBOOK.md](docs/RUNBOOK.md).
+
+
 ## Overview
 
 Migrate from localStorage-based client-side app to a full web service with database backend, user accounts, and API-driven architecture.

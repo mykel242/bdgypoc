@@ -99,9 +99,10 @@ budgie/
 │   ├── nginx-ssl.conf       # UNUSED since 2026-09-04
 │   ├── generate-ssl-cert.sh # UNUSED since 2026-09-04
 │   └── *.service            # Systemd service files
-├── compose.yml              # Base compose (development)
-├── compose.prod.yml         # Production overrides
-├── compose.ssl.yml          # UNUSED since 2026-09-04 — do not load
+├── scripts/
+│   ├── backup-db.sh         # nightly dump (budgie-backup.timer)
+│   ├── restore-db.sh        # restore from a dump (destructive)
+│   └── build-images.sh      # Quadlet cannot build images
 ├── Dockerfile.backend       # Backend multi-stage build
 ├── Dockerfile.frontend      # Frontend multi-stage build
 └── package.json             # Root package.json
@@ -246,36 +247,43 @@ optionalAuth    // Continues without auth (for public routes)
 
 ## Development Setup
 
-### Prerequisites
-- Node.js 24+
-- Podman and podman-compose
-- PostgreSQL client (optional, for direct DB access)
+There is no separate development environment. It was retired on 2026-09-04
+along with `podman-compose`; budgie runs one way, from Quadlet units, and
+that is production. Changes go through build-and-restart:
 
-### Local Development
+### Prerequisites
+- Podman 4.9+
+- Node.js 24+ (only if you want to run pieces outside containers)
+
+### Change / build / restart
 
 ```bash
-# Start all services in development mode
-podman-compose up
-
-# Or run frontend/backend separately for faster iteration:
-
-# Terminal 1: Database only
-podman-compose up db
-
-# Terminal 2: Backend
-npm run backend
-
-# Terminal 3: Frontend
-cd frontend && npm run dev
+# edit backend/ or frontend/
+scripts/build-images.sh
+systemctl --user restart budgie-backend.service budgie-frontend.service
 ```
 
-### Development URLs
+Quadlet cannot build images — `.build` units require Podman 5.0+ and this
+host runs 4.9.3 — so the build is explicit. Skipping it is the easy mistake:
+the containers restart cleanly on the old image and nothing reports a
+problem.
+
+### Watching it
+
+```bash
+journalctl --user -u budgie-backend.service -f
+podman logs budgie-nginx --tail 50
+```
+
+### URLs
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost/budgie-v2 |
-| Backend API | http://localhost:3001/api |
+| App | http://localhost/budgie-v2/ |
+| Health | http://localhost/health |
 | Database | localhost:5432 |
+
+The backend is not published to the host; reach it through nginx.
 
 ### Environment Variables
 

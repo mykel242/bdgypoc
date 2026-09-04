@@ -8,9 +8,10 @@ This document captures lessons learned from production incidents and provides re
 |------|----------|-------|
 | Database data | `budgie-postgres-data-prod` volume | **THIS IS YOUR PRODUCTION DATA** |
 | Database backups | `/mnt/backup/budgie/` | Nightly at 2am, 30-day retention |
-| Application config | `/opt/budgie/.env` | Contains DB password - keep secure |
-| Systemd service | `~/.config/systemd/user/budgie-containers.service` | Auto-start on reboot |
+| Credentials | podman secrets `budgie-db-password`, `budgie-session-secret` | Since 2026-09-04. `.env` is no longer read at runtime |
+| Quadlet units | `~/.config/containers/systemd/budgie-*.container`, `budgie.network` | Auto-start on reboot; canonical copies in ops-agent `deploy/quadlet/` |
 | Backup timer | `~/.config/systemd/user/budgie-backup.timer` | Nightly backup schedule |
+| Local images | `localhost/budgie_backend`, `localhost/budgie_frontend` | Built by `scripts/build-images.sh`; Quadlet cannot build them |
 
 ## Incident: 2026-01-04 - Production Data Loss
 
@@ -122,12 +123,15 @@ podman exec budgie-db psql -U budgie_user -d postgres -c "\l"
 # 3. If database is named wrong (e.g., budgie_dev instead of budgie):
 podman exec budgie-db psql -U budgie_user -d postgres -c "ALTER DATABASE budgie_dev RENAME TO budgie;"
 
-# 4. If password mismatch, update DB password to match .env:
-grep DB_PASSWORD /opt/budgie/.env
-podman exec -it budgie-db psql -U budgie_user -h /var/run/postgresql -d postgres -c "ALTER USER budgie_user WITH PASSWORD 'password_from_env';"
+# 4. If password mismatch, reconcile the podman secret and the database.
+#    The secret is what the app uses; the volume is what postgres enforces.
+#    Read the secret (this DOES print it — mind your shoulder):
+podman secret inspect --showsecret budgie-db-password --format '{{.SecretData}}'
+podman exec -it budgie-db psql -U budgie_user -h /var/run/postgresql -d postgres \
+  -c "ALTER USER budgie_user WITH PASSWORD '<the secret value>';"
 
 # 5. Restart backend
-podman restart budgie-backend
+systemctl --user restart budgie-backend.service
 ```
 
 ### Scenario: Backend Won't Connect to Database
@@ -136,15 +140,15 @@ podman restart budgie-backend
 
 **Steps**:
 ```bash
-# 1. Check what password .env expects
-grep DB_PASSWORD /opt/budgie/.env
+# 1. Check what password the app is using (prints the secret)
+podman secret inspect --showsecret budgie-db-password --format '{{.SecretData}}'
 
 # 2. Update database password to match
 podman exec -it budgie-db psql -U budgie_user -h /var/run/postgresql -d postgres \
   -c "ALTER USER budgie_user WITH PASSWORD 'the_password_from_env';"
 
 # 3. Restart backend
-podman restart budgie-backend
+systemctl --user restart budgie-backend.service
 ```
 
 ### Scenario: Missing Database Column
@@ -164,72 +168,80 @@ podman exec budgie-db psql -U budgie_user -d budgie \
 
 ### Scenario: Need to Restore from Backup
 
-**Steps**:
+Use the script. It takes a safety backup of the current state first, so a
+mistaken restore is itself recoverable:
+
 ```bash
-# 1. List available backups
-ls -la /mnt/backup/budgie/
-
-# 2. Stop the application
-podman-compose -f compose.yml -f compose.prod.yml down
-
-# 3. Decompress backup if needed
-gunzip /mnt/backup/budgie/budgie_2026-01-04_020000.sql.gz
-
-# 4. Start only the database
-podman-compose -f compose.yml -f compose.prod.yml up -d db
-sleep 5
-
-# 5. Restore (this drops and recreates tables)
-podman exec -i budgie-db psql -U budgie_user -d budgie < /mnt/backup/budgie/budgie_2026-01-04_020000.sql
-
-# 6. Start rest of stack
-podman-compose -f compose.yml -f compose.prod.yml up -d
+scripts/restore-db.sh                     # newest dump
+scripts/restore-db.sh /mnt/backup/budgie/budgie_2026-09-04_020003.sql.gz
 ```
+
+It stops budgie-nginx and budgie-backend, drops and recreates the database,
+replays the dump, prints the restored row counts, and starts the app again.
+
+The drop-and-recreate is required, not cautious: `backup-db.sh` writes plain
+`pg_dump` output with no `--clean` and no `--create`, so replaying it over a
+populated database fails on tables that already exist.
+
+Doing it by hand, if the script is unavailable:
+
+```bash
+systemctl --user stop budgie-nginx.service budgie-backend.service
+podman exec budgie-db pg_dump -U budgie_user budgie > /mnt/backup/budgie/pre_restore_$(date +%F_%H%M%S).sql
+podman exec budgie-db psql -U budgie_user -d postgres -c "DROP DATABASE budgie;"
+podman exec budgie-db psql -U budgie_user -d postgres -c "CREATE DATABASE budgie;"
+zcat /mnt/backup/budgie/budgie_YYYY-MM-DD_HHMMSS.sql.gz \
+  | podman exec -i budgie-db psql -U budgie_user -d budgie -v ON_ERROR_STOP=1
+systemctl --user start budgie-nginx.service budgie-backend.service
+```
+
+**Verified 2026-09-04.** A dump was restored into a scratch database and
+compared against live: identical row counts and an identical md5 over all
+239 transactions. This path is known-good, not assumed.
 
 ### Scenario: Complete Rebuild from Scratch
 
 **When**: Everything is broken beyond repair
 
-**Steps**:
 ```bash
 # 1. SAVE ANY BACKUPS FIRST
 cp -r /mnt/backup/budgie ~/budgie-backup-emergency
 
 # 2. Stop everything
-podman-compose -f compose.yml -f compose.prod.yml down
+systemctl --user stop budgie-nginx.service budgie-backend.service \
+                      budgie-frontend.service budgie-db.service
 
 # 3. Remove ALL budgie volumes (DESTRUCTIVE!)
-# Note: budgie-backups-prod exists but nothing writes to it. The real backups
-# are on /mnt/backup/budgie/, written by scripts/backup-db.sh.
-podman volume rm budgie-postgres-data-prod budgie-backend-node-modules-prod budgie-backups-prod
+# budgie-backups-prod holds the admin UI's on-demand backups. The nightly
+# dumps that matter are files on /mnt/backup/budgie/, saved in step 1.
+podman volume rm budgie-postgres-data-prod budgie-backups-prod
 
-# 4. Pull latest code
+# 4. Pull latest code (Forgejo is canonical; GitHub is a cold mirror)
 cd /opt/budgie
-git fetch origin
-git checkout release/0.1
-git pull
+git fetch origin && git checkout release/0.1 && git pull
 
-# 5. Recreate .env with fresh secrets
-DB_PASS=$(openssl rand -base64 24)
-SESSION_SECRET=$(openssl rand -base64 32)
-cat > .env << EOF
-DB_HOST=db
-DB_PORT=5432
-DB_NAME=budgie
-DB_USER=budgie_user
-DB_PASSWORD=${DB_PASS}
-SESSION_SECRET=${SESSION_SECRET}
-NODE_ENV=production
-PORT=3001
-FRONTEND_URL=http://cronus
-EOF
-chmod 600 .env
+# 5. Recreate the podman secrets
+read -rsp 'new DB password: ' P && echo && printf '%s' "$P" | podman secret create budgie-db-password - && unset P
+openssl rand -base64 32 | tr -d '\n' | podman secret create budgie-session-secret -
 
-# 6. Start fresh
-podman-compose -f compose.yml -f compose.prod.yml up -d
+# 6. Build the local images (Quadlet cannot build them)
+scripts/build-images.sh
 
-# 7. If you have a backup to restore, do it now (see restore procedure above)
+# 7. Start the stack
+systemctl --user start budgie-nginx.service
+
+# 8. Create the single user (there is no registration form)
+podman exec -i budgie-db psql -U budgie_user -d budgie -c \
+  "INSERT INTO users (email, first_name, last_name, password_hash, is_admin)
+   VALUES ('you@example.com', 'First', 'Last', 'unused', true);"
+
+# 9. If you have a backup to restore, do it now — this replaces step 8
+scripts/restore-db.sh
 ```
+
+If the database password changed in step 5, the existing postgres volume
+still has the old one. Either restore from a dump into a fresh volume, or
+`ALTER USER budgie_user WITH PASSWORD '...'` to match.
 
 ## Verification Procedures
 

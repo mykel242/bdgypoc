@@ -13,7 +13,7 @@ Single-user by design: there is no login, no registration, and no TLS. See
 | URL | `http://cronus/budgie-v2/` |
 | Host | cronus, rootless Podman under user `mykel` |
 | Source | `/opt/budgie`, canonical repo `forgejo:mykel/budgie.git` |
-| Started by | `budgie-containers.service` (user unit, enabled) |
+| Started by | Quadlet units, `budgie-nginx.service` and its `Requires=` chain |
 | Backups | nightly 02:00 → `/mnt/backup/budgie/`, 30-day retention |
 
 Containers: `budgie-nginx` (port 80), `budgie-frontend`, `budgie-backend`
@@ -30,8 +30,7 @@ Start here — these are the current, maintained docs:
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the pieces fit, API endpoints, code layout |
 | [docs/DATA_PERSISTENCE.md](docs/DATA_PERSISTENCE.md) | Volumes, backup and restore |
 | [docs/PORT_CONFIGURATION.md](docs/PORT_CONFIGURATION.md) | Port handling and the 443 constraint |
-| [CONTAINER_DEVELOPMENT.md](CONTAINER_DEVELOPMENT.md) | Local container development |
-| [QUICKSTART.md](QUICKSTART.md) | Getting a dev environment up |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Where to change what, in the app code |
 
 `MIGRATION_GUIDE.md` and `MIGRATION_PLAN.md` are historical records of the
 move to a web service. They describe work already completed.
@@ -42,8 +41,8 @@ move to a web service. They describe work already completed.
 # Status
 podman ps --filter name=budgie
 
-# Restart the stack
-systemctl --user restart budgie-containers.service
+# Restart the stack (Requires= pulls the rest in)
+systemctl --user restart budgie-nginx.service
 
 # Logs
 podman logs budgie-backend --tail 50
@@ -51,8 +50,12 @@ podman logs budgie-backend --tail 50
 # Back up now
 /opt/budgie/scripts/backup-db.sh
 
-# Rebuild after a code change
-podman-compose -f compose.yml -f compose.prod.yml up -d --build
+# Rebuild after a code change (Quadlet cannot build images)
+scripts/build-images.sh
+systemctl --user restart budgie-backend.service budgie-frontend.service
+
+# Restore from a nightly dump (destructive, takes a safety backup first)
+scripts/restore-db.sh
 ```
 
 The database is always named `budgie` — never `budgie_dev` or
@@ -61,13 +64,20 @@ incident; see [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## Development
 
+**There is no separate dev environment.** It was retired on 2026-09-04 along
+with `podman-compose`; budgie now runs one way, from Quadlet units, and that
+is production.
+
+To change the app: edit under `backend/` or `frontend/`, rebuild, restart.
+
 ```bash
-./container-dev.sh start     # containerized dev environment
+scripts/build-images.sh
+systemctl --user restart budgie-backend.service budgie-frontend.service
 ```
 
-Dev uses a separate database named `budgie_dev` and its own volumes, so it
-cannot touch production data. See
-[CONTAINER_DEVELOPMENT.md](CONTAINER_DEVELOPMENT.md).
+Forgetting the rebuild is the easy mistake — the containers restart happily
+on the old image and nothing reports a problem. See
+[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for where things live in the code.
 
 ## Security posture
 

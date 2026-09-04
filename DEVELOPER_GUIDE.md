@@ -68,7 +68,7 @@ Quick reference for which files to modify when adding features to Budgie.
 
 ---
 
-### 3. Adding Authentication to Frontend
+### 3. Adding a Frontend Feature
 
 **Order of operations:**
 
@@ -90,46 +90,35 @@ Quick reference for which files to modify when adding features to Budgie.
    ```
 
 3. **Create page** → `frontend/src/routes/your-page/+page.svelte`
-   ```svelte
-   <script lang="ts">
-     import { authStore } from '$lib/stores/auth';
-     // component logic
-   </script>
-   ```
 
 **Files touched:** 2-3
 
 ---
 
-### 4. Adding a New Protected Page
+### 4. Adding a New Page
+
+Budgie is single-user and has no login, so **there is nothing to protect
+against and no auth check to add.** `requireAuth` resolves the sole user
+into the session rather than rejecting, so every route already succeeds.
 
 **Order of operations:**
 
-1. **Create page** → `frontend/src/routes/protected-page/+page.svelte`
+1. **Create page** → `frontend/src/routes/your-page/+page.svelte`
 
-2. **Add auth check** → Inside the `<script>` tag:
-   ```typescript
-   import { authStore } from '$lib/stores/auth';
-   import { goto } from '$app/navigation';
-   import { onMount } from 'svelte';
-
-   onMount(() => {
-     const unsubscribe = authStore.subscribe(state => {
-       if (!state.isAuthenticated && !state.isLoading) {
-         goto('/login?returnUrl=/protected-page');
-       }
-     });
-     return unsubscribe;
-   });
-   ```
-
-3. **Add backend protection** (if API needed) → `backend/routes/yourRoute.js`
+2. **Backend route, if it needs one** → `backend/routes/yourRoute.js`
    ```javascript
    const { requireAuth } = require('../middleware/auth');
+   // Not a gate — it populates req.session.userId for the single user,
+   // so handlers can rely on it being set.
    router.get('/endpoint', requireAuth, async (req, res) => {
-     // Only accessible if logged in
+     // req.session.userId is always populated here
    });
    ```
+
+> Do **not** copy the old pattern of subscribing to `authStore` and
+> `goto('/login?...')` on an unauthenticated state. That route was deleted
+> on 2026-09-04; the guard can never fire, and if it somehow did it would
+> redirect to a 404.
 
 **Files touched:** 1-2
 
@@ -237,7 +226,7 @@ backend/
 │   ├── Ledger.js            # Ledger model
 │   └── Transaction.js       # Transaction model
 ├── routes/
-│   ├── auth.js              # Auth endpoints (register, login, logout)
+│   ├── auth.js              # /me, /check, /change-password (no login)
 │   ├── ledgers.js           # Ledger CRUD endpoints
 │   └── transactions.js      # Transaction CRUD endpoints
 └── server.js                # Express app setup (add new route registrations)
@@ -250,14 +239,13 @@ frontend/src/
 ├── lib/
 │   ├── api.ts               # API client + TypeScript types (modify for new endpoints)
 │   └── stores/
-│       └── auth.ts          # Auth state management (modify for auth flow changes)
+│       └── auth.ts          # Session state (checkAuth/me; no login/logout)
 ├── routes/
-│   ├── +layout.svelte       # Root layout (modify for global nav/auth check)
+│   ├── +layout.svelte       # Root layout (global nav)
 │   ├── +page.svelte         # Landing page
-│   ├── login/
-│   │   └── +page.svelte     # Login page
-│   └── register/
-│       └── +page.svelte     # Register page
+│   ├── ledgers/             # Ledger list + detail
+│   ├── settings/            # Settings, incl. admin section
+│   └── admin/backups/       # Admin: database backups
 ├── app.css                  # Global styles
 └── app.html                 # HTML shell (rarely modified)
 ```
@@ -265,7 +253,7 @@ frontend/src/
 ### Configuration Files (Rarely Modified)
 
 ```
-.env                         # Environment variables (DB credentials, ports)
+# credentials are podman secrets, not .env (since 2026-09-04)
 frontend/.env                # Frontend env vars (API URL)
 package.json                 # Dependencies and scripts
 frontend/package.json        # Frontend dependencies
@@ -352,7 +340,7 @@ brew services restart postgresql  # Restart DB
 
 5. **Environment variables not loading**
    - Frontend: Must start with `VITE_`
-   - Backend: Restart after changing `.env`
+   - Backend: rebuild + restart after changing code or secrets
 
 ---
 
