@@ -200,7 +200,9 @@ nano .env.production
 
 **Example .env.production:**
 ```bash
-DB_NAME=budgie_production
+# Always 'budgie' — no _dev or _production suffix. The old non-containerized
+# database was named budgie_production; the containerized one is not.
+DB_NAME=budgie
 DB_USER=budgie_user
 DB_PASSWORD=your_secure_password_here
 SESSION_SECRET=your_session_secret_from_old_secrets_file
@@ -232,10 +234,10 @@ curl http://localhost/budgie-v2/
 
 ```bash
 # Copy backup into container and restore
-cat budgie_backup_*.sql | podman exec -i budgie-db psql -U budgie_user -d budgie_production
+cat budgie_backup_*.sql | podman exec -i budgie-db psql -U budgie_user -d budgie
 
 # Verify data
-podman exec -it budgie-db psql -U budgie_user -d budgie_production -c "SELECT count(*) FROM users;"
+podman exec -it budgie-db psql -U budgie_user -d budgie -c "SELECT count(*) FROM users;"
 ```
 
 ### Step 6: Set Up Auto-Start (optional)
@@ -374,7 +376,7 @@ podman-compose up --build
 - **Quick Start**: This file
 - **Migration Guide**: [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) - Detailed cleanup instructions
 - **Container Development**: [CONTAINER_DEVELOPMENT.md](CONTAINER_DEVELOPMENT.md) - Complete reference
-- **Project README**: [README.md](README.md) - Application documentation
+- **Project README**: [readme.md](readme.md) - Application documentation
 
 ---
 
