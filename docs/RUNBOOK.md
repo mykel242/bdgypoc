@@ -195,9 +195,32 @@ zcat /mnt/backup/budgie/budgie_YYYY-MM-DD_HHMMSS.sql.gz \
 systemctl --user start budgie-nginx.service budgie-backend.service
 ```
 
-**Verified 2026-09-04.** A dump was restored into a scratch database and
-compared against live: identical row counts and an identical md5 over all
-239 transactions. This path is known-good, not assumed.
+**Verified end-to-end 2026-09-04.** Not a scratch-database rehearsal — the
+real script was run against the production database, dropping and
+recreating it.
+
+Method, in case it needs repeating:
+
+1. Fingerprinted production: row counts plus a separate md5 over the full
+   contents of `users`, `ledgers` and `transactions`, and the credit/debit
+   sums.
+2. Took a fresh dump and proved *that specific dump* restored into a scratch
+   database matching the fingerprint exactly — so the input was known-good
+   before it was trusted.
+3. Copied the verified dump to a second physical device (the root LVM;
+   `/mnt/backup` is `/dev/sda1`) with matching md5, so a failure of the
+   backup drive mid-test still left a route back.
+4. Ran `scripts/restore-db.sh` for real.
+5. Re-fingerprinted.
+
+**Result: byte-identical.** All three table md5s and both sums matched. The
+only delta was the `sessions` count, which rises on its own because
+express-session writes a row per cookie-less request.
+
+Also confirmed the sequences survive: creating a ledger through the API
+afterwards allocated id 12, not a duplicate of an existing id. A restore
+that leaves sequences behind is a real failure mode and does not show up
+until the next write.
 
 ### Scenario: Complete Rebuild from Scratch
 

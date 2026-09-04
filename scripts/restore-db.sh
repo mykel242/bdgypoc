@@ -57,7 +57,10 @@ echo "==> restoring"
 case "$SRC" in
   *.gz) zcat "$SRC" ;;
   *)    cat  "$SRC" ;;
-esac | podman exec -i budgie-db psql -U "$DBUSER" -d "$DB" -q -v ON_ERROR_STOP=1
+esac | podman exec -i budgie-db psql -U "$DBUSER" -d "$DB" -q -o /dev/null -v ON_ERROR_STOP=1
+# -o /dev/null discards query RESULTS only; errors still reach stderr and
+# ON_ERROR_STOP still aborts. Without it the dump's setval()/set_config()
+# calls print result tables that look like noise in the middle of a restore.
 
 echo "==> restored contents"
 podman exec budgie-db psql -U "$DBUSER" -d "$DB" -tAc \
