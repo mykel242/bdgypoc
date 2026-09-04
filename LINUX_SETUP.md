@@ -201,7 +201,7 @@ podman logs budgie-db
 - Close database port 5432
 - Change all secrets in .env.production
 - Use production compose file
-- See deploy/README.md for production deployment
+- See docs/DEPLOYMENT.md for production deployment
 
 ### Next Steps
 

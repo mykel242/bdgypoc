@@ -1,97 +1,89 @@
-# Budgie Web Service
+# Budgie
 
-Personal finance ledger application with SvelteKit frontend and Express/PostgreSQL backend.
+Personal finance ledger. SvelteKit frontend, Express + PostgreSQL backend,
+running as four Podman containers.
 
-## Quick Start (Clean Environment)
+Single-user by design: there is no login, no registration, and no TLS. See
+[Security posture](#security-posture) before changing where this runs.
 
-### Prerequisites
-- Node.js v24.11.0 (use nvm)
-- PostgreSQL installed and running
-- macOS or Linux
+## Running deployment
 
-### Setup from Scratch
+| | |
+|---|---|
+| URL | `http://cronus/budgie-v2/` |
+| Host | cronus, rootless Podman under user `mykel` |
+| Source | `/opt/budgie`, canonical repo `forgejo:mykel/budgie.git` |
+| Started by | `budgie-containers.service` (user unit, enabled) |
+| Backups | nightly 02:00 → `/mnt/backup/budgie/`, 30-day retention |
 
-```bash
-# 1. Clone repository (or navigate to project)
-cd /Users/mykel/Development/budgie
+Containers: `budgie-nginx` (port 80), `budgie-frontend`, `budgie-backend`
+(3001, internal), `budgie-db` (PostgreSQL 16, 5432).
 
-# 2. Use correct Node.js version
-nvm use
-# If Node v24.11.0 not installed:
-# nvm install --lts
-# nvm use
+## Documentation
 
-# 3. Run setup script (does EVERYTHING automatically)
-bash dev-scripts/setup-webservice-dev.sh
-```
+Start here — these are the current, maintained docs:
 
-**The setup script will:**
-- ✅ Check Node.js version (fails if wrong version)
-- ✅ Install all backend dependencies
-- ✅ Create SvelteKit frontend with TypeScript
-- ✅ Install Tailwind CSS v4 with Vite plugin
-- ✅ Configure Tailwind (app.css, vite.config.ts, layout)
-- ✅ Create PostgreSQL database and user
-- ✅ Run database migrations (create tables)
-- ✅ Create environment files (.env)
-- ✅ Create development scripts
-- ✅ Update package.json
+| Doc | For |
+|---|---|
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deploying from scratch |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | **When something is broken.** Incident history and recovery procedures |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the pieces fit, API endpoints, code layout |
+| [docs/DATA_PERSISTENCE.md](docs/DATA_PERSISTENCE.md) | Volumes, backup and restore |
+| [docs/PORT_CONFIGURATION.md](docs/PORT_CONFIGURATION.md) | Port handling and the 443 constraint |
+| [CONTAINER_DEVELOPMENT.md](CONTAINER_DEVELOPMENT.md) | Local container development |
+| [QUICKSTART.md](QUICKSTART.md) | Getting a dev environment up |
 
-### Start Development
+`MIGRATION_GUIDE.md` and `MIGRATION_PLAN.md` are historical records of the
+move to a web service. They describe work already completed.
 
-```bash
-npm run dev
-```
-
-This starts:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
-
-## Complete Cleanup and Restart
-
-If you want to start completely fresh:
+## Common operations
 
 ```bash
-# 1. Clean everything
-bash dev-scripts/cleanup-webservice-dev.sh
-# (Type 'yes' when prompted)
+# Status
+podman ps --filter name=budgie
 
-# 2. Fresh setup
-nvm use
-bash dev-scripts/setup-webservice-dev.sh
+# Restart the stack
+systemctl --user restart budgie-containers.service
 
-# 3. Start development
-npm run dev
+# Logs
+podman logs budgie-backend --tail 50
+
+# Back up now
+/opt/budgie/scripts/backup-db.sh
+
+# Rebuild after a code change
+podman-compose -f compose.yml -f compose.prod.yml up -d --build
 ```
 
-## Available Commands
+The database is always named `budgie` — never `budgie_dev` or
+`budgie_production` in production. That inconsistency caused a data-loss
+incident; see [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start frontend and backend |
-| `npm run frontend` | Start frontend only (port 5173) |
-| `npm run backend` | Start backend only (port 3001) |
-| `npm run db:test` | Test database connection |
-| `npm run db:reset` | Reset database (cleanup + setup) |
+## Development
 
-## Troubleshooting
-
-### "Wrong Node.js version detected!"
 ```bash
-nvm use
+./container-dev.sh start     # containerized dev environment
 ```
 
-### Styling not showing up
-```bash
-# Make sure @tailwindcss/vite is installed
-cd frontend
-npm install -D @tailwindcss/vite
-cd ..
+Dev uses a separate database named `budgie_dev` and its own volumes, so it
+cannot touch production data. See
+[CONTAINER_DEVELOPMENT.md](CONTAINER_DEVELOPMENT.md).
 
-# Hard refresh browser (Cmd+Shift+R)
-```
+## Security posture
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for production deployment.
+Budgie serves plain HTTP with no authentication. Anyone who can reach the
+host on the network can read and write the finance data, and there is no
+audit trail because there is only ever one actor. The security boundary is
+the network, not the application.
+
+This is a deliberate choice for a single-user app on a trusted LAN — a login
+prompt guarding a machine you already had to be on bought nothing. **If
+budgie is ever exposed beyond that LAN, both the missing authentication and
+the missing TLS have to be reconsidered first.**
+
+The session machinery (`express-session`, the `sessions` table, the cookie)
+is still in place, so restoring real authentication means re-adding a login
+route rather than rebuilding session handling.
 
 ## License
 
