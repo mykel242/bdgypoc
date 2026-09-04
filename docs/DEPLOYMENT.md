@@ -14,11 +14,11 @@ This guide covers deploying Budgie on a Linux or macOS server using Podman conta
 
 ```bash
 # Clone the repository
-git clone https://github.com/mykel242/bdgypoc.git /opt/budgie
+git clone forgejo:mykel/budgie.git /opt/budgie
 cd /opt/budgie
 
 # Create environment file
-cp .env.example .secrets  # or create manually (see below)
+cp .env.example .env  # then edit (see below)
 
 # Start the application
 podman-compose -f compose.yml -f compose.prod.yml up -d --build
@@ -46,7 +46,7 @@ podman machine start
 ```bash
 sudo mkdir -p /opt/budgie
 sudo chown $USER:$USER /opt/budgie
-git clone https://github.com/mykel242/bdgypoc.git /opt/budgie
+git clone forgejo:mykel/budgie.git /opt/budgie
 cd /opt/budgie
 ```
 
@@ -80,7 +80,7 @@ openssl rand -base64 32
 
 ### 4. Configure Port Access (Linux Only)
 
-To allow non-root users to bind to ports 80 and 443:
+To allow non-root users to bind to port 80:
 
 ```bash
 echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/80-unprivileged-ports.conf
@@ -89,32 +89,35 @@ sudo sysctl --system
 
 ### 5. Start the Application
 
-**HTTP only (port 80):**
 ```bash
 cd /opt/budgie
-podman-compose -f compose.yml -f compose.prod.yml up -d --build
+BUDGIE_PORT=80 podman-compose -f compose.yml -f compose.prod.yml up -d --build
 ```
 
-**HTTPS with self-signed certificate (ports 80 and 443):**
-```bash
-cd /opt/budgie
+Budgie serves **plain HTTP on port 80 only**. TLS was removed on 2026-09-04;
+see the note at the end of this guide.
 
-# Generate SSL certificate
-./deploy/generate-ssl-cert.sh your-hostname
+### 6. Create the User
 
-# Start with SSL
-podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml up -d --build
-```
+Budgie is a single-user application. There is no registration form and no
+login — the backend resolves the sole row in `users` and establishes its
+session automatically on first request.
 
-### 6. Create Admin User
-
-1. Open the app in your browser and register a new account
-2. Set the user as admin:
+On a fresh database with no user, every request fails with
+`no user row found`. Create the one account directly:
 
 ```bash
-podman exec -it budgie-db psql -U budgie_user -d budgie \
-  -c "UPDATE users SET is_admin = true WHERE email = 'your@email.com';"
+podman exec -i budgie-db psql -U budgie_user -d budgie -c \
+  "INSERT INTO users (email, first_name, last_name, password_hash, is_admin)
+   VALUES ('you@example.com', 'First', 'Last', 'unused', true);"
 ```
+
+`uuid`, `created_at` and `updated_at` fill in from column defaults.
+`password_hash` is `NOT NULL` so it must be supplied, but nothing ever checks
+it — no code path authenticates against a password any more. `is_admin` must
+be **true** or the admin pages in Settings stay hidden.
+
+If more than one row somehow exists, the middleware picks the lowest `id`.
 
 ## Auto-Start on Boot (Linux)
 
@@ -147,7 +150,14 @@ TimeoutStartSec=120
 WantedBy=default.target
 ```
 
-For HTTPS, modify ExecStart/ExecStop to include `-f compose.ssl.yml`.
+Do **not** add `-f compose.ssl.yml`. It publishes `0.0.0.0:443`, and a
+wildcard bind collides with any other listener on that port. On 2026-09-03
+that collision lost a boot race and kept budgie down for 14 hours — see
+[RUNBOOK.md](RUNBOOK.md).
+
+The canonical copy of this unit is tracked at
+`deploy/budgie-containers.user.service`; install from there rather than
+retyping it.
 
 Enable and start:
 ```bash
@@ -189,11 +199,13 @@ podman-compose -f compose.yml -f compose.prod.yml up -d --build
 
 ### Database Backups
 
-**Via Web UI (Recommended):**
-1. Log in as an admin user
-2. Go to Settings → Database Backups
-3. Click "Create Backup"
-4. Download backups as needed
+**Scheduled (what actually runs):** `budgie-backup.timer` fires
+`scripts/backup-db.sh` nightly at 02:00, writing gzipped dumps to
+`/mnt/backup/budgie/` with 30-day retention. This is the backup that matters.
+
+**Via Web UI:** Settings → Database Backups → Create Backup. No login is
+required; the admin pages are visible as long as the single user has
+`is_admin = true`.
 
 **Via Command Line:**
 ```bash
@@ -220,16 +232,6 @@ ALTER TABLE users ADD COLUMN new_field VARCHAR(100);
 
 > **Important**: Always update `database/setup.sql` when adding columns, so fresh deployments include the schema change.
 
-### SSL Certificate Renewal
-
-Self-signed certificates are valid for 365 days. To regenerate:
-
-```bash
-cd /opt/budgie
-./deploy/generate-ssl-cert.sh your-hostname
-podman-compose -f compose.yml -f compose.prod.yml -f compose.ssl.yml restart nginx
-```
-
 ## Troubleshooting
 
 ### Containers Won't Start
@@ -239,10 +241,11 @@ Check container status:
 podman ps -a
 ```
 
-Check for port conflicts:
+Check for port conflicts — this is the known failure mode, see
+[RUNBOOK.md](RUNBOOK.md):
 ```bash
-sudo lsof -i :80
-sudo lsof -i :443
+ss -tlnp | grep ':80 '
+podman inspect budgie-nginx --format '{{.State.Error}}'
 ```
 
 ### Database Connection Issues
@@ -259,20 +262,26 @@ For rootless podman, ensure you're running as the correct user and linger is ena
 loginctl show-user $USER | grep Linger
 ```
 
-### "Invalid email or password" After Migration
+### App Loads But Shows No Data
 
-This usually means the database volume changed. Check which volumes exist:
+Previously this presented as "Invalid email or password"; with the login gone,
+the same faults surface as empty ledgers or a 500. It usually means the
+database volume changed. Check which volumes exist:
 ```bash
 podman volume ls
 ```
 
-Ensure you're using the correct production volume (`budgie-postgres-data-prod`).
+Ensure you're using the correct production volume (`budgie-postgres-data-prod`),
+then confirm the session establishes:
+```bash
+curl -sS http://localhost/api/auth/check   # expect "authenticated":true
+```
 
 ## Container Architecture
 
 | Container | Port | Purpose |
 |-----------|------|---------|
-| budgie-nginx | 80, 443 | Reverse proxy, SSL termination |
+| budgie-nginx | 80 | Reverse proxy (no TLS) |
 | budgie-frontend | 80 (internal) | Static file server (SvelteKit build) |
 | budgie-backend | 3001 (internal) | API server (Express.js) |
 | budgie-db | 5432 | PostgreSQL database |
@@ -283,9 +292,9 @@ Data is stored in Podman named volumes:
 
 | Volume | Purpose |
 |--------|---------|
-| budgie-postgres-data-prod | Database files |
+| budgie-postgres-data-prod | Database files — **this is the production data** |
 | budgie-backend-node-modules-prod | Backend dependencies |
-| budgie-backups-prod | Database backup files |
+| budgie-backups-prod | Declared but **empty**; nothing writes to it. The real backups are files under `/mnt/backup/budgie/`. |
 
 To list volumes:
 ```bash
@@ -296,3 +305,22 @@ To inspect a volume:
 ```bash
 podman volume inspect budgie-postgres-data-prod
 ```
+
+## Changed 2026-09-04: no TLS, no login
+
+Two things this guide used to describe were removed:
+
+- **TLS / port 443.** `compose.ssl.yml`, `deploy/nginx-ssl.conf`,
+  `deploy/ssl/` and `deploy/generate-ssl-cert.sh` still exist in the tree but
+  are no longer referenced by anything. They were kept so the change is easy
+  to reverse, not because they are in use.
+- **Login and registration.** `POST /api/auth/login`, `/api/auth/register`,
+  `/api/auth/logout` and the login and register pages are gone. The backend
+  fills in the single user's session instead of returning 401.
+
+Security posture, stated plainly: anyone who can reach this host on the
+network can read and write the finance data, and there is no audit trail
+because there is only ever one actor. The boundary is the network, not the
+application. That is a deliberate choice for a single-user app on a trusted
+LAN — if budgie is ever exposed more widely, both decisions must be revisited
+before that happens.

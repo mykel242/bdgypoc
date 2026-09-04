@@ -20,8 +20,11 @@ Budgie is designed to work on any port without configuration changes. This docum
 
 ### Production
 
-- Nginx: Port **80** (HTTP) and **443** (HTTPS)
-- Uses SSL certificates for HTTPS
+- Nginx: Port **80** only, plain HTTP
+- No TLS. Removed 2026-09-04 along with the login flow — see
+  [RUNBOOK.md](RUNBOOK.md). Port 443 is deliberately not claimed: budgie's
+  old `0.0.0.0:443` bind lost a boot race and caused a 14-hour outage.
+- Set via `BUDGIE_PORT=80` in `budgie-containers.service`.
 
 ---
 
@@ -60,9 +63,9 @@ The API client uses relative URLs that work through nginx:
 // frontend/src/lib/api.ts
 const API_BASE_URL = "";  // Empty = same origin
 
-fetch(`${API_BASE_URL}/api/auth/login`, {...})
-// Becomes: http://localhost:8080/api/auth/login (on macOS)
-// Becomes: http://192.168.1.100/api/auth/login (on Linux from network)
+fetch(`${API_BASE_URL}/api/ledgers`, {...})
+// Becomes: http://localhost:8080/api/ledgers (on macOS)
+// Becomes: http://192.168.1.100/api/ledgers (on Linux from network)
 ```
 
 ### 3. **Nginx Proxies Everything**
@@ -215,10 +218,13 @@ Run `container-dev.sh` which automatically configures it:
 # Automatically runs: sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
 ```
 
-### Wrong Port After Login
+### Wrong Port After Navigation
 
 **Symptom:**
-After logging in on `localhost:8080`, redirected to `localhost` (missing port).
+After navigating on `localhost:8080`, redirected to `localhost` (missing port).
+
+> Historically this bit hardest on the post-login redirect. There is no login
+> any more, but the same bug appears on any `goto()` that omits `${base}`.
 
 **Cause:**
 Navigation not using `${base}` prefix.
@@ -282,10 +288,10 @@ goto('/ledgers');
 ### 2. **Use Relative API URLs**
 ```typescript
 // ✓ GOOD
-fetch('/api/auth/login')  // Relative to current origin
+fetch('/api/ledgers')  // Relative to current origin
 
 // ✗ BAD
-fetch('http://localhost:3001/api/auth/login')  // Hardcoded host/port
+fetch('http://localhost:3001/api/ledgers')  // Hardcoded host/port
 ```
 
 ### 3. **Avoid Hardcoded Origins**
@@ -309,38 +315,22 @@ BUDGIE_PORT=3000 ./container-dev.sh start
 
 ---
 
-## Production SSL/TLS (Port 443)
+## Production TLS — not in use
 
-For production HTTPS:
+Budgie serves plain HTTP on port 80 and terminates no TLS. This section
+previously documented a certbot/nginx HTTPS setup; it was removed on
+2026-09-04 because it described a configuration the deployment does not use
+and must not adopt casually.
 
-1. **Obtain SSL certificate:**
-   ```bash
-   sudo certbot certonly --nginx -d yourdomain.com
-   ```
+If TLS is ever wanted again, the constraint that caused the 2026-09-03
+outage still applies: **do not bind `0.0.0.0:443`.** A wildcard bind
+collides with any other listener on that port, and whichever service starts
+second fails. Bind a specific address instead, or use a port nothing else
+claims.
 
-2. **Update nginx configuration:**
-   ```nginx
-   server {
-       listen 443 ssl http2;
-       ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-       ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
-
-       location /budgie-v2 {
-           proxy_pass http://frontend:5173/budgie-v2;
-       }
-   }
-   ```
-
-3. **Redirect HTTP to HTTPS:**
-   ```nginx
-   server {
-       listen 80;
-       return 301 https://$host$request_uri;
-   }
-   ```
-
-See `deploy/README.md` for complete production setup.
-
+The unused material is still in the tree — `compose.ssl.yml`,
+`deploy/nginx-ssl.conf`, `deploy/ssl/`, `deploy/generate-ssl-cert.sh` — kept
+so the change is reversible.
 ---
 
 ## Summary

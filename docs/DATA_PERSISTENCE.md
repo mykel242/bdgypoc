@@ -124,7 +124,7 @@ scp ./backups/budgie_20251125_092704.sql newserver:/opt/budgie/backups/
 
 **Result:**
 - ✅ All data migrated
-- ✅ Users can log in with same credentials
+- ✅ The user row survives (credentials no longer used — see below)
 - ✅ All ledgers and transactions preserved
 
 ---
@@ -242,17 +242,17 @@ aws s3 sync ./backups/ s3://my-bucket/budgie-backups/
 **Verify persistence works:**
 
 ```bash
-# 1. Create test data
-curl -X POST http://localhost/api/auth/register \
+# 1. Create test data (registration was removed 2026-09-04; create a ledger
+#    instead — no credentials or cookie needed, the session is automatic)
+curl -sS -X POST http://localhost/api/ledgers \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","first_name":"Test","last_name":"User","password":"Password123"}'
+  -d '{"name":"persistence-test","starting_balance":0}'
 
 # 2. Restart containers
 ./container-dev.sh restart
 
 # 3. Verify data still exists
-curl http://localhost/api/auth/check -b cookies.txt
-# Should show user still exists
+curl -sS http://localhost/api/ledgers | grep persistence-test
 ```
 
 **Test backup/restore:**

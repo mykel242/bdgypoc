@@ -14,7 +14,7 @@ Budgie is a full-stack web application for personal finance management, allowing
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    nginx (Reverse Proxy)                         │
-│                    Port 80/443 (SSL)                             │
+│                    Port 80 (plain HTTP, no TLS)                  │
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │ /budgie-v2/*      → frontend:80 (static files)              ││
 │  │ /api/*            → backend:3001 (API)                      ││
@@ -28,7 +28,7 @@ Budgie is a full-stack web application for personal finance management, allowing
 │   (nginx + static)       │   │   (Node.js + Express)    │
 │                          │   │                          │
 │   SvelteKit SSG build    │   │   REST API               │
-│   Tailwind CSS           │   │   Session auth           │
+│   Tailwind CSS           │   │   Auto-session (1 user)  │
 │   TypeScript             │   │   Sequelize ORM          │
 └──────────────────────────┘   └──────────────────────────┘
                                            │
@@ -37,7 +37,7 @@ Budgie is a full-stack web application for personal finance management, allowing
                                │   Database Container     │
                                │   (PostgreSQL 16)        │
                                │                          │
-                               │   budgie_production DB   │
+                               │   budgie DB              │
                                └──────────────────────────┘
 ```
 
@@ -84,8 +84,6 @@ budgie/
 │   │   └── routes/
 │   │       ├── +layout.svelte
 │   │       ├── +page.svelte           # Home
-│   │       ├── login/+page.svelte
-│   │       ├── register/+page.svelte
 │   │       ├── settings/+page.svelte
 │   │       ├── ledgers/+page.svelte
 │   │       ├── ledgers/[id]/+page.svelte
@@ -97,13 +95,13 @@ budgie/
 ├── deploy/
 │   ├── nginx-dev.conf       # Dev nginx config
 │   ├── nginx-prod.conf      # Production nginx config
-│   ├── nginx-ssl.conf       # HTTPS nginx config
 │   ├── nginx-container.conf # Frontend container nginx
-│   ├── generate-ssl-cert.sh # SSL certificate generator
+│   ├── nginx-ssl.conf       # UNUSED since 2026-09-04
+│   ├── generate-ssl-cert.sh # UNUSED since 2026-09-04
 │   └── *.service            # Systemd service files
 ├── compose.yml              # Base compose (development)
 ├── compose.prod.yml         # Production overrides
-├── compose.ssl.yml          # HTTPS overrides
+├── compose.ssl.yml          # UNUSED since 2026-09-04 — do not load
 ├── Dockerfile.backend       # Backend multi-stage build
 ├── Dockerfile.frontend      # Frontend multi-stage build
 └── package.json             # Root package.json
@@ -163,12 +161,16 @@ budgie/
 ### Authentication (`/api/auth`)
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
-| POST | /register | Create new user | No |
-| POST | /login | Authenticate user | No |
-| POST | /logout | End session | Yes |
-| GET | /me | Get current user | Yes |
-| GET | /check | Check auth status | No |
-| POST | /change-password | Change password | Yes |
+Single-user deployment: there is no login. `requireAuth` resolves the sole
+user into the session instead of returning 401, so every endpoint below
+succeeds without credentials. `/register`, `/login` and `/logout` were
+removed on 2026-09-04.
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | /me | Get current user | auto |
+| GET | /check | Establish + report session (always `authenticated: true`) | auto |
+| POST | /change-password | Change password (vestigial — nothing checks it) | auto |
 
 ### Ledgers (`/api/ledgers`)
 | Method | Path | Description | Auth |
@@ -271,7 +273,7 @@ cd frontend && npm run dev
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:8080/budgie-v2 |
+| Frontend | http://localhost/budgie-v2 |
 | Backend API | http://localhost:3001/api |
 | Database | localhost:5432 |
 
@@ -312,7 +314,7 @@ podman build -f Dockerfile.frontend --target production -t budgie-frontend .
 ### Database Access
 ```bash
 # Connect to production database
-podman exec -it budgie-db psql -U budgie_user -d budgie_production
+podman exec -it budgie-db psql -U budgie_user -d budgie
 
 # Useful queries
 SELECT * FROM users;
@@ -325,10 +327,11 @@ SELECT * FROM transactions WHERE ledger_id = 1 ORDER BY sort_order;
 # Health check
 curl http://localhost:3001/health
 
-# Login
-curl -X POST http://localhost:3001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password"}'
+# Session (no credentials needed — auto-established)
+curl -sS http://localhost/api/auth/check   # -> {"authenticated":true,...}
+
+# Any authenticated endpoint, no cookie required
+curl -sS http://localhost/api/ledgers
 ```
 
 ## Common Development Tasks
@@ -345,17 +348,11 @@ curl -X POST http://localhost:3001/api/auth/login \
 
 1. Create route directory in `frontend/src/routes/`
 2. Add `+page.svelte` file
-3. Include auth check if needed:
-```svelte
-onMount(() => {
-  const unsubscribe = authStore.subscribe(state => {
-    if (!state.isAuthenticated && !state.isLoading) {
-      goto(`${base}/login`);
-    }
-  });
-  return unsubscribe;
-});
-```
+3. No auth check is needed. The backend establishes the single user's
+   session on first request, so there is no unauthenticated state for a page
+   to guard against. The old `goto(`${base}/login`)` guards were removed on
+   2026-09-04 — re-adding one would redirect to a route that no longer
+   exists.
 
 ### Modifying Database Schema
 
