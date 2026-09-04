@@ -103,8 +103,33 @@ level up, because the frontend it proxies to had just died.
 
 ### Fix
 `Requires=`/`After=budgie-backend.service` on the frontend, and `RestartSec`
-cut from 30s to 5s on frontend and nginx. Cold start went from ~31s with two
-failures to **0.92s fully serialized with none**.
+cut from 30s to 5s on frontend and nginx.
+
+### Reboot #2 exposed a second one underneath it
+With the frontend fixed, the backend's own failure became visible — it had
+been masked by the noisier one above:
+
+```
+Failed to start server: SequelizeConnectionError: the database system is starting up
+```
+
+`Requires=`/`After=` order on the db **container starting**. Postgres accepts
+TCP well before it will answer queries, so the backend connected, was
+refused, and exited. Fixed with an `ExecStartPre` that polls `pg_isready`
+for up to 60s.
+
+### The pattern behind both
+Migrating compose to Quadlet **silently drops every dependency compose
+expressed as a condition rather than an order.** `depends_on:` with
+`condition: service_healthy` has no Quadlet equivalent on Podman 4.9. It does
+not error — it simply disappears, and `Restart=on-failure` then hides the
+consequence by eventually succeeding.
+
+Both bugs had the same shape: a dependency that existed in compose, was
+translated as ordering, and needed to be a readiness check.
+
+Cold start went from ~31s with two failures to **2.4s fully serialized with
+none**.
 
 ### The lesson worth keeping
 **A stack that fails at boot and is rescued by a restart is indistinguishable
