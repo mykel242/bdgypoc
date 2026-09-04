@@ -60,13 +60,16 @@ ufw allow from 192.168.4.0/24 to any port 22 proto tcp comment 'SSH from local n
 print_status "Allowing HTTP from local network..."
 ufw allow from 192.168.4.0/24 to any port 80 proto tcp comment 'HTTP from local network'
 
-# Allow HTTPS from local network
-print_status "Allowing HTTPS from local network..."
-ufw allow from 192.168.4.0/24 to any port 443 proto tcp comment 'HTTPS from local network'
+# Port 443 is deliberately NOT opened. Budgie dropped TLS on 2026-09-04 and
+# serves plain HTTP on port 80 only; nothing on this host listens on 443.
+# See docs/RUNBOOK.md — budgie's old 0.0.0.0:443 bind is what lost a boot
+# race and caused a 14-hour outage. Do not re-add this without re-adding TLS.
 
-# Allow Node.js app port from local network
-print_status "Allowing Node.js app port 3000 from local network..."
-ufw allow from 192.168.4.0/24 to any port 3000 proto tcp comment 'Node.js app from local network'
+# Allow port 3000 from local network — this is Forgejo's web UI, not budgie.
+# (The original comment said "Node.js app", from when budgie itself ran on
+# 3000 under PM2. Budgie's backend is now internal-only on 3001.)
+print_status "Allowing port 3000 (Forgejo web UI) from local network..."
+ufw allow from 192.168.4.0/24 to any port 3000 proto tcp comment 'Forgejo web UI from local network'
 
 # Allow loopback interface (important for local services)
 print_status "Allowing loopback interface..."
