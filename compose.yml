@@ -20,7 +20,13 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U budgie_user -d budgie_dev"]
+      # Read the container's own POSTGRES_* rather than hardcoding the dev
+      # database. compose.prod.yml overrides those env vars but cannot
+      # override a hardcoded healthcheck, which left production probing a
+      # non-existent `budgie_dev` and logging a FATAL every 5s.
+      # `$$` escapes compose interpolation so the shell inside the container
+      # expands them.
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 3s
       retries: 5
