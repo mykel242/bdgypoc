@@ -17,11 +17,6 @@ export interface User {
   created_at?: string;
 }
 
-export interface AuthResponse {
-  message: string;
-  user: User;
-}
-
 export interface CheckAuthResponse {
   authenticated: boolean;
   userId?: number;
@@ -99,41 +94,10 @@ async function apiFetch<T>(
 /**
  * Authentication API
  */
+// Single-user deployment: register, login and logout were removed along with
+// the login UI. The session is established automatically by the backend, so
+// `check` and `me` are the only identity calls left.
 export const auth = {
-  /**
-   * Register a new user
-   */
-  async register(
-    email: string,
-    first_name: string,
-    last_name: string,
-    password: string,
-  ): Promise<AuthResponse> {
-    return apiFetch<AuthResponse>("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ email, first_name, last_name, password }),
-    });
-  },
-
-  /**
-   * Login user
-   */
-  async login(email: string, password: string): Promise<AuthResponse> {
-    return apiFetch<AuthResponse>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-  },
-
-  /**
-   * Logout user
-   */
-  async logout(): Promise<{ message: string }> {
-    return apiFetch<{ message: string }>("/api/auth/logout", {
-      method: "POST",
-    });
-  },
-
   /**
    * Check if user is authenticated
    */

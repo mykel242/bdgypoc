@@ -15,16 +15,8 @@
 	// Password validation state
 	let passwordErrors: string[] = [];
 
-	// Auth check
-	onMount(() => {
-		const unsubscribe = authStore.subscribe(state => {
-			if (!state.isAuthenticated && !state.isLoading) {
-				goto(`${base}/login?returnUrl=${base}/settings`);
-			}
-		});
-
-		return unsubscribe;
-	});
+	// Single-user deployment: the session is established automatically, so
+	// there is no unauthenticated state to guard against here.
 
 	function validatePassword(password: string): string[] {
 		const errors: string[] = [];

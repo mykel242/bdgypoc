@@ -22,18 +22,10 @@
 	let importError = '';
 	let fileInput: HTMLInputElement;
 
-	// Auth check
+	// Single-user deployment: the session is established automatically, so
+	// there is no unauthenticated state to guard against here.
 	onMount(() => {
-		const unsubscribe = authStore.subscribe(state => {
-			if (!state.isAuthenticated && !state.isLoading) {
-				goto(`${base}/login?returnUrl=${base}/ledgers`);
-			}
-		});
-
-		// Load ledgers
 		ledgerStore.loadLedgers($ledgerStore.showArchived);
-
-		return unsubscribe;
 	});
 
 	function handleCreateNew() {

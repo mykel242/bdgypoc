@@ -207,20 +207,15 @@
 		return acc;
 	}, [] as Array<Transaction & { runningBalance: number }>);
 
+	// Single-user deployment: the session is established automatically, so
+	// there is no unauthenticated state to guard against here.
 	onMount(() => {
-		// Check auth
-		const unsubAuth = authStore.subscribe(state => {
-			if (!state.isAuthenticated && !state.isLoading) {
-				goto(`${base}/login?returnUrl=${base}/ledgers/${$page.params.id}`);
-			}
-		});
-
 		// Parse ledger ID
 		ledgerId = parseInt($page.params.id);
 		if (isNaN(ledgerId)) {
 			error = 'Invalid ledger ID';
 			isLedgerLoading = false;
-			return unsubAuth;
+			return;
 		}
 
 		// Load ledger and transactions
@@ -238,8 +233,6 @@
 				isLedgerLoading = false;
 			}
 		})();
-
-		return unsubAuth;
 	});
 
 	onDestroy(() => {

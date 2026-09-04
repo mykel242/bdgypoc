@@ -15,21 +15,10 @@
 	let showDeleteDialog = false;
 	let deletingBackup: Backup | null = null;
 
-	// Auth check - redirect if not admin
+	// Single-user deployment: the sole account is the administrator, so there
+	// is neither an unauthenticated nor a non-admin state to guard against.
 	onMount(() => {
-		const unsubscribe = authStore.subscribe(state => {
-			if (!state.isLoading) {
-				if (!state.isAuthenticated) {
-					goto(`${base}/login?returnUrl=${base}/admin/backups`);
-				} else if (!state.user?.is_admin) {
-					goto(`${base}/ledgers`);
-				} else {
-					loadBackups();
-				}
-			}
-		});
-
-		return unsubscribe;
+		loadBackups();
 	});
 
 	async function loadBackups() {

@@ -3,10 +3,6 @@
     import { base } from "$app/paths";
 
     let { user, isAuthenticated, isLoading } = $derived($authStore);
-
-    async function handleLogout() {
-        await authStore.logout();
-    }
 </script>
 
 <div
@@ -127,28 +123,7 @@
                             >
                                 Settings
                             </a>
-                            <button
-                                on:click={handleLogout}
-                                class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors"
-                            >
-                                Logout
-                            </button>
                         </div>
-                    </div>
-                {:else}
-                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4 border-t">
-                        <a
-                            href="{base}/login"
-                            class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-center"
-                        >
-                            Login
-                        </a>
-                        <a
-                            href="{base}/register"
-                            class="px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center"
-                        >
-                            Register
-                        </a>
                     </div>
                 {/if}
             </div>
